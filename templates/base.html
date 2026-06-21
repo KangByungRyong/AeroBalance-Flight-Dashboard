@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Flight Data Monitoring System{% endblock %}</title>
+
+  <!-- Bootstrap 5 Dark -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+
+  <!-- 공통 스타일 -->
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="d-flex flex-column">
+
+  <!-- 전체 너비 헤더 -->
+  <header class="top-navbar d-flex align-items-center justify-content-between">
+    <div class="navbar-left d-flex align-items-center gap-2">
+      <button id="hamburger-btn-top" aria-label="사이드바 토글">☰</button>
+      <img src="{% static 'img/aerobalance_logo.png' %}" alt="AeroBalance" class="navbar-logo">
+      <div class="navbar-brand-block">
+        <span class="brand-name">AERO BALANCE</span>
+        <span class="brand-sub">Flight Information Monitoring Dashboard</span>
+      </div>
+    </div>
+    <div class="navbar-right">
+      <div id="session-status" class="d-flex align-items-center gap-2">
+        <span class="status-dot inactive"></span>
+        <span id="session-label">세션 없음</span>
+        <span id="session-timer"></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- 헤더 아래: 사이드바 + 콘텐츠 -->
+  <div class="body-row">
+
+    <!-- 좌측 사이드바 -->
+    <nav id="sidebar" class="sidebar">
+      <ul class="sidebar-menu">
+        <li class="{% if active_page == 'map' %}active{% endif %}">
+          <a href="{% url 'map_view:index' %}" title="항행지도">
+            <span class="icon">🗺️</span>
+            <span class="label">항행지도</span>
+          </a>
+        </li>
+        <li class="{% if active_page == 'chart' %}active{% endif %}">
+          <a href="{% url 'strip_chart:index' %}" title="Strip Chart">
+            <span class="icon">📈</span>
+            <span class="label">Strip Chart</span>
+          </a>
+        </li>
+        <li class="{% if active_page == 'management' %}active{% endif %}">
+          <a href="{% url 'data_management:index' %}" title="데이터 관리">
+            <span class="icon">📋</span>
+            <span class="label">데이터 관리</span>
+          </a>
+        </li>
+        <li class="{% if active_page == 'replay' %}active{% endif %}">
+          <a href="{% url 'replay:index' %}" title="Replay">
+            <span class="icon">▶️</span>
+            <span class="label">Replay</span>
+          </a>
+        </li>
+      </ul>
+
+      <ul class="sidebar-menu sidebar-bottom">
+        <li class="{% if active_page == 'udp_status' %}active{% endif %}">
+          <a href="{% url 'udp_receiver:status' %}" title="UDP 연결 상태">
+            <span class="icon">📡</span>
+            <span class="label">UDP 상태</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <!-- 메인 콘텐츠 -->
+    <main id="content">
+      {% block content %}{% endblock %}
+    </main>
+
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- 사이드바 + WebSocket 공통 JS -->
+  {% load static %}
+  <script src="{% static 'js/sidebar.js' %}"></script>
+  <script src="{% static 'js/ws_client.js' %}"></script>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

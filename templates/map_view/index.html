@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}항행지도 — Flight Monitor{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  /* 지도 영역: 콘텐츠 전체 */
+  #content { padding: 0 !important; overflow: hidden !important; }
+  #map-wrapper { position: relative; width: 100%; height: 100%; }
+  #map { width: 100%; height: 100%; }
+
+  /* ── HUD 오버레이 ─────────────────────────────── */
+  #hud {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 1000;
+    background: rgba(13, 13, 26, 0.88);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--text-primary);
+    font-family: monospace;
+    font-size: 0.82rem;
+    min-width: 190px;
+    backdrop-filter: blur(4px);
+  }
+  .hud-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 2px 0;
+  }
+  .hud-row + .hud-row { border-top: 1px solid rgba(255,255,255,0.05); }
+  .hud-label { color: var(--text-muted); font-size: 0.72rem; letter-spacing: 0.06em; }
+  .hud-value { font-weight: 700; text-align: right; }
+  .hud-divider { border-top: 1px solid var(--border-color); margin: 6px 0; }
+
+  /* WebSocket 상태 */
+  .ws-status { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .ws-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .ws-dot.ws-active {
+    background: #2ecc71;
+    box-shadow: 0 0 6px #2ecc71;
+    animation: pulse-g 1.5s infinite;
+  }
+  .ws-dot.ws-idle { background: var(--text-muted); }
+  #ws-text { font-size: 0.72rem; color: var(--text-muted); }
+  @keyframes pulse-g {
+    0%,100% { box-shadow: 0 0 3px #2ecc71; }
+    50%      { box-shadow: 0 0 10px #2ecc71; }
+  }
+
+  /* ── GPS 없음 오버레이 ───────────────────────── */
+  #no-gps-msg {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    background: rgba(13, 13, 26, 0.85);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 20px 30px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    backdrop-filter: blur(4px);
+  }
+  #no-gps-msg .gps-icon { font-size: 2rem; margin-bottom: 8px; }
+
+  /* ── 팔로우 버튼 ─────────────────────────────── */
+  #follow-btn {
+    position: absolute;
+    bottom: 24px;
+    right: 12px;
+    z-index: 1000;
+    background: rgba(13, 13, 26, 0.88);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 6px 12px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    transition: color 0.2s, border-color 0.2s;
+  }
+  #follow-btn:hover { color: var(--text-primary); }
+  #follow-btn.follow-active {
+    color: #2ecc71;
+    border-color: rgba(46, 204, 113, 0.5);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="map-wrapper">
+  <div id="map"></div>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="ws-status">
+      <span id="ws-dot" class="ws-dot ws-idle"></span>
+      <span id="ws-text">X-Plane 대기 중</span>
+    </div>
+    <div class="hud-divider"></div>
+    <div class="hud-row"><span class="hud-label">LAT</span><span class="hud-value" id="hud-lat">--</span></div>
+    <div class="hud-row"><span class="hud-label">LON</span><span class="hud-value" id="hud-lon">--</span></div>
+    <div class="hud-row"><span class="hud-label">ALT</span><span class="hud-value" id="hud-alt">-- ft</span></div>
+    <div class="hud-divider"></div>
+    <div class="hud-row"><span class="hud-label">IAS</span><span class="hud-value" id="hud-ias">-- kt</span></div>
+    <div class="hud-row"><span class="hud-label">HDG</span><span class="hud-value" id="hud-hdg">--°</span></div>
+    <div class="hud-divider"></div>
+    <div class="hud-row"><span class="hud-label">PITCH</span><span class="hud-value" id="hud-pitch">--°</span></div>
+    <div class="hud-row"><span class="hud-label">ROLL</span> <span class="hud-value" id="hud-roll">--°</span></div>
+    <div class="hud-row"><span class="hud-label">VVI</span>  <span class="hud-value" id="hud-vvi">-- fpm</span></div>
+  </div>
+
+  <!-- GPS 없음 안내 -->
+  <div id="no-gps-msg">
+    <div class="gps-icon">📡</div>
+    <div>위치 데이터 대기 중</div>
+    <div style="font-size:0.75rem;margin-top:4px;">X-Plane: Data Output #5·#6 활성화 필요</div>
+  </div>
+
+  <!-- 팔로우 버튼 -->
+  <button id="follow-btn" class="follow-active">📍 팔로우 ON</button>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'js/map_view.js' %}"></script>
+{% endblock %}
