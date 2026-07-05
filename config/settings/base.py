@@ -100,3 +100,5 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 UDP_PORT: int = env.int("UDP_PORT", default=49100)
 XPLANE_IP: str = env("XPLANE_IP", default="10.0.0.110")
+
+STRIP_CHART_PRESETS_DIR: Path = BASE_DIR / "data" / "strip_chart_presets"

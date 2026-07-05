@@ -65,7 +65,7 @@ xplane_monitor/          ← Django 프로젝트 루트
 │   └── asgi.py          ← Channels ASGI 진입점
 ├── apps/
 │   ├── udp_receiver/    ← UDP 수신 + WebSocket Consumer
-│   ├── map_view/        ← Page 1: 항행지도 + 항적
+│   ├── map_view/        ← Page 1: Air Traffic Tracking + 항적
 │   ├── strip_chart/     ← Page 2: Strip Chart (uPlot)
 │   ├── data_management/ ← Page 3: 조종사/특이사항 관리
 │   └── replay/          ← Page 4: 저장 데이터 Replay
@@ -122,7 +122,7 @@ xplane_monitor/          ← Django 프로젝트 루트
 ### 사이드바 메뉴 구성
 ☰  Flight Monitor          ← 로고/타이틀 영역
 ━━━━━━━━━━━━━━━━━━━
-🗺️  항행지도               ← Page 1: /map/
+🗺️  Air Traffic Tracking               ← Page 1: /map/
 📈  Strip Chart            ← Page 2: /chart/
 📋  데이터 관리             ← Page 3: /management/
 ▶️  Replay                 ← Page 4: /replay/
@@ -133,7 +133,7 @@ xplane_monitor/          ← Django 프로젝트 루트
 ### 페이지별 URL 구조
 | **페이지** | **URL** | **앱** |
 |-----------|---------|--------|
-| 항행지도 | `/map/` | `map_view` |
+| Air Traffic Tracking | `/map/` | `map_view` |
 | Strip Chart | `/chart/` | `strip_chart` |
 | 데이터 관리 | `/management/` | `data_management` |
 | Replay | `/replay/` | `replay` |
@@ -159,7 +159,7 @@ xplane_monitor/          ← Django 프로젝트 루트
       <li class="{% raw %}{% if active_page == 'map' %}active{% endif %}{% endraw %}">
         <a href="{% raw %}{% url 'map_view:index' %}{% endraw %}">
           <span class="icon">🗺️</span>
-          <span class="label">항행지도</span>
+          <span class="label">Air Traffic Tracking</span>
         </a>
       </li>
       <li class="{% raw %}{% if active_page == 'chart' %}active{% endif %}{% endraw %}">
@@ -262,7 +262,7 @@ document.querySelectorAll('#hamburger-btn, #hamburger-btn-top')
   });
 
 ## 페이지별 콘텐츠 영역 특이사항
-항행지도 (Page 1): 콘텐츠 영역 = 지도 100% 풀사이즈
+Air Traffic Tracking (Page 1): 콘텐츠 영역 = 지도 100% 풀사이즈
 사이드바 닫힘 시 지도 영역 자동 확장 (resize 이벤트 → map.invalidateSize())
 Strip Chart (Page 2): 상단 파라미터 선택 툴바 + 하단 uPlot 차트 영역
 데이터 관리 (Page 3): 좌측 세션 목록 + 우측 상세 편집 패널 (2-column)
@@ -403,6 +403,25 @@ uPlot GitHub
 Leaflet.js 공식 문서
 X-Plane UDP 데이터 포맷
 
+
+---
+
+## To Do List
+
+### UDP 데이터 확장성 (2026-07-05 검토 완료)
+
+**배경:** X-Plane에서 새 데이터 그룹을 추가했을 때 대시보드 코드 수정 없이 자동 처리 가능한지 검토.
+
+**결론:** 현재 구조(`dataref_config.py` 직접 편집 방식) 유지.
+
+**워크플로우:**
+1. X-Plane에서 새 DATA 그룹 활성화
+2. `apps/udp_receiver/dataref_config.py`의 `GROUP_MAP`에 그룹 정의 추가
+3. 서버 재시작 → 수신·DB 저장·WebSocket 전송·Strip Chart 표시 자동 반영
+
+**향후 고려 (미착수):**
+- [ ] Strip Chart 파라미터 선택 UI 동적화 — `GROUP_MAP` 기반으로 선택 가능한 파라미터 목록을 자동 생성하도록 변경 (현재 하드코딩)
+- [ ] `GROUP_MAP` 외부 파일(JSON/YAML)화 — Python 코드 편집 없이 그룹 정의 추가 가능하게 (현재는 불필요, 필요 시 검토)
 
 ---
 

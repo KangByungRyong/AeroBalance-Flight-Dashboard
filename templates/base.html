@@ -42,15 +42,15 @@
     <nav id="sidebar" class="sidebar">
       <ul class="sidebar-menu">
         <li class="{% if active_page == 'map' %}active{% endif %}">
-          <a href="{% url 'map_view:index' %}" title="항행지도">
+          <a href="{% url 'map_view:index' %}" title="Air Traffic Tracking">
             <span class="icon">🗺️</span>
-            <span class="label">항행지도</span>
+            <span class="label">Air Traffic Tracking</span>
           </a>
         </li>
         <li class="{% if active_page == 'chart' %}active{% endif %}">
-          <a href="{% url 'strip_chart:index' %}" title="Strip Chart">
+          <a href="{% url 'strip_chart:index' %}" title="Data Chart">
             <span class="icon">📈</span>
-            <span class="label">Strip Chart</span>
+            <span class="label">Data Chart</span>
           </a>
         </li>
         <li class="{% if active_page == 'management' %}active{% endif %}">
