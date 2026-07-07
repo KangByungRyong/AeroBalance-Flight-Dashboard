@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}데이터 관리 — Flight Monitor{% endblock %}
+
+{% comment %}
+─── 추후 구성 예정 ────────────────────────────────────────
+{% block extra_css %}
+  <style>
+    #management-layout { ... }
+    ... (생략)
+  </style>
+{% endblock %}
+{% endcomment %}
+
+{% block content %}
+<div style="display:flex; align-items:center; justify-content:center; height:100%; color:var(--text-muted);">
+  <div style="text-align:center;">
+    <div style="font-size:3rem; opacity:0.3;">📋</div>
+    <p style="margin-top:12px;">데이터 관리 — 추후 구성 예정</p>
+  </div>
+</div>
+{% endblock %}
+
+{% comment %}
+─── 추후 구성 예정 ────────────────────────────────────────
+{% block extra_js %}
+  <script src="{% static 'js/data_management.js' %}"></script>
+{% endblock %}
+{% endcomment %}

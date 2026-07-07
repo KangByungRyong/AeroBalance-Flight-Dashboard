@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Data Chart — Flight Monitor{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/strip_chart.css' %}">
+{% endblock %}
+
+{% block content %}
+<div id="chart-page">
+
+  <div id="chart-toolbar">
+    <div class="toolbar-left">
+      <select id="sel-group" class="toolbar-select">
+        <option value="">-- 분야 선택 --</option>
+      </select>
+      <select id="sel-channel" class="toolbar-select" disabled>
+        <option value="">-- 항목 선택 --</option>
+      </select>
+      <button id="btn-chart" disabled>Chart</button>
+      <button id="btn-clear-layout">Clear</button>
+      <span class="grid-divider"></span>
+      <button id="btn-save-layout" class="btn-layout-action">💾 저장</button>
+      <button id="btn-load-layout" class="btn-layout-action">📂 불러오기</button>
+      <input type="file" id="layout-file-input" accept=".ini" style="display:none">
+      <button id="btn-external-window" class="btn-layout-action btn-external">🖥 외부창</button>
+    </div>
+    <div class="toolbar-right">
+      <span id="udp-status" class="udp-status" style="display:none">● Disconnect</span>
+      <span class="grid-label">배열</span>
+      <button class="btn-grid active" data-grid="2x2">2×2</button>
+      <button class="btn-grid" data-grid="3x3">3×3</button>
+      <button class="btn-grid" data-grid="4x3">4×3</button>
+      <span class="grid-divider"></span>
+      <input type="number" id="grid-cols-input" class="grid-custom-input" min="1" max="8" value="2">
+      <span class="grid-x-label">×</span>
+      <input type="number" id="grid-rows-input" class="grid-custom-input" min="1" max="6" value="2">
+      <button id="btn-grid-custom">적용</button>
+    </div>
+  </div>
+
+  <div id="dock-area"></div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/uplot.min.js' %}"></script>
+<script src="{% static 'js/strip_chart.js' %}"></script>
+{% endblock %}
