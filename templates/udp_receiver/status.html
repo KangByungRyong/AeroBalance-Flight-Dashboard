@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}UDP 연결 상태 — Flight Monitor{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/udp_status.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="udp-status-page p-4">
+
+  <!-- 페이지 헤더 -->
+  <div class="page-header mb-4">
+    <h4 class="mb-0">UDP 연결 상태</h4>
+    <span class="text-muted small">X-Plane → 이 시스템 실시간 수신 현황</span>
+  </div>
+
+  <div class="row g-3">
+
+    <!-- ── 설정 정보 ───────────────────────────────────── -->
+    <div class="col-12 col-xl-4">
+      <div class="status-card">
+        <div class="card-label">수신 설정</div>
+        <table class="config-table">
+          <tbody>
+            <tr>
+              <th>X-Plane IP</th>
+              <td id="cfg-xplane-ip">{{ xplane_ip }}</td>
+            </tr>
+            <tr>
+              <th>수신 IP</th>
+              <td>0.0.0.0 (모든 인터페이스)</td>
+            </tr>
+            <tr>
+              <th>수신 포트</th>
+              <td id="cfg-udp-port">{{ udp_port }}</td>
+            </tr>
+            <tr>
+              <th>패킷 포맷</th>
+              <td>X-Plane 12 DATA</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── 연결 상태 ───────────────────────────────────── -->
+    <div class="col-12 col-xl-4">
+      <div class="status-card">
+        <div class="card-label">연결 상태</div>
+
+        <div class="connection-state mb-3">
+          <span id="conn-dot" class="conn-dot conn-idle"></span>
+          <span id="conn-text" class="conn-text">대기 중...</span>
+        </div>
+
+        <table class="config-table">
+          <tbody>
+            <tr>
+              <th>수신 속도</th>
+              <td><span id="pps">—</span></td>
+            </tr>
+            <tr>
+              <th>마지막 수신</th>
+              <td><span id="since-last">—</span></td>
+            </tr>
+            <tr>
+              <th>발신지 주소</th>
+              <td><span id="source-addr">—</span></td>
+            </tr>
+            <tr>
+              <th>총 수신 패킷</th>
+              <td><span id="total-packets">0</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── 실시간 스냅샷 ────────────────────────────────── -->
+    <div class="col-12 col-xl-4">
+      <div class="status-card">
+        <div class="card-label">실시간 값 (최근 수신)</div>
+        <div class="snapshot-grid">
+          <div class="snap-item">
+            <span class="snap-label">IAS</span>
+            <span id="snap-ias_kt" class="snap-value">—</span>
+            <span class="snap-unit">kt</span>
+          </div>
+          <div class="snap-item">
+            <span class="snap-label">TAS</span>
+            <span id="snap-tas_kt" class="snap-value">—</span>
+            <span class="snap-unit">kt</span>
+          </div>
+          <div class="snap-item">
+            <span class="snap-label">GS</span>
+            <span id="snap-gs_kt" class="snap-value">—</span>
+            <span class="snap-unit">kt</span>
+          </div>
+          <div class="snap-item">
+            <span class="snap-label">고도</span>
+            <span id="snap-alt_ft" class="snap-value">—</span>
+            <span class="snap-unit">ft</span>
+          </div>
+          <div class="snap-item">
+            <span class="snap-label">VVI</span>
+            <span id="snap-vvi_fpm" class="snap-value">—</span>
+            <span class="snap-unit">fpm</span>
+          </div>
+          <div class="snap-item">
+            <span class="snap-label">피치</span>
+            <span id="snap-pitch" class="snap-value">—</span>
+            <span class="snap-unit">°</span>
+          </div>
+          <div class="snap-item">
+            <span class="snap-label">롤</span>
+            <span id="snap-roll" class="snap-value">—</span>
+            <span class="snap-unit">°</span>
+          </div>
+          <div class="snap-item">
+            <span class="snap-label">헤딩</span>
+            <span id="snap-heading" class="snap-value">—</span>
+            <span class="snap-unit">°</span>
+          </div>
+          <div class="snap-item">
+            <span class="snap-label">G</span>
+            <span id="snap-g_normal" class="snap-value">—</span>
+            <span class="snap-unit">G</span>
+          </div>
+          <div class="snap-item">
+            <span class="snap-label">AOA</span>
+            <span id="snap-aoa_deg" class="snap-value">—</span>
+            <span class="snap-unit">°</span>
+          </div>
+          <div class="snap-item">
+            <span class="snap-label">Beta</span>
+            <span id="snap-beta_deg" class="snap-value">—</span>
+            <span class="snap-unit">°</span>
+          </div>
+          <div class="snap-item">
+            <span class="snap-label">Mach</span>
+            <span id="snap-mach" class="snap-value">—</span>
+            <span class="snap-unit"></span>
+          </div>
+          <div class="snap-item snap-wide">
+            <span class="snap-label">위도</span>
+            <span id="snap-lat" class="snap-value">—</span>
+            <span class="snap-unit">°</span>
+          </div>
+          <div class="snap-item snap-wide">
+            <span class="snap-label">경도</span>
+            <span id="snap-lon" class="snap-value">—</span>
+            <span class="snap-unit">°</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── 수신 그룹 현황 ────────────────────────────────── -->
+    <div class="col-12">
+      <div class="status-card">
+        <div class="card-label">데이터 그룹 수신 현황 (총 24개)</div>
+        <div id="groups-grid" class="groups-grid">
+          <!-- JS로 동적 생성 -->
+        </div>
+        <div class="mt-2 d-flex gap-3 align-items-center">
+          <span class="legend-dot legend-ok"></span><span class="legend-text">수신 중</span>
+          <span class="legend-dot legend-idle"></span><span class="legend-text">미수신</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/udp_status.js' %}"></script>
+{% endblock %}
