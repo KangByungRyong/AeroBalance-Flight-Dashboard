@@ -11,7 +11,6 @@ import asyncio
 import logging
 import os
 import struct
-import threading
 import time
 from dataclasses import dataclass, field
 
@@ -37,6 +36,7 @@ class _UdpStatus:
 
 
 udp_status = _UdpStatus()
+_transports: list = []
 
 
 # ─── 파서 ─────────────────────────────────────────────────────
@@ -168,9 +168,52 @@ class _XPlaneProtocol(asyncio.DatagramProtocol):
             logger.exception("UDP 패킷 처리 오류 (addr=%s)", addr)
 
 
-async def _udp_listen(port: int) -> None:
-    from channels.layers import get_channel_layer
+def _should_start() -> bool:
+    """Django runserver는 두 프로세스를 사용:
 
+      - 외부(reloader) 프로세스: RUN_MAIN 미설정, 실제로 서버를 서빙하지 않음
+      - 내부(app)      프로세스: RUN_MAIN="true", 실제 ASGI 서버 실행
+
+    UDP 리스너는 실제로 서빙하는 내부 프로세스에서만 실행해야 한다.
+    """
+    import sys
+
+    using_runserver = any("runserver" in arg for arg in sys.argv)
+    run_main = os.environ.get("RUN_MAIN")
+
+    if using_runserver and run_main != "true":
+        return "--noreload" in sys.argv
+    return True
+
+
+# ─── 진입점 ───────────────────────────────────────────────────
+_listener_started = False
+
+
+async def start_udp_listener() -> None:
+    """ASGI 서버를 실제로 구동하는 이벤트 루프 위에서 UDP 리스너를 시작한다.
+    (apps.py의 ready()가 Daphne의 twisted_loop에 태스크로 예약하거나,
+    lifespan을 지원하는 서버라면 config/asgi.py의 lifespan startup에서 호출)
+
+    중요: 이 함수는 반드시 ASGI 서버를 구동하는 이벤트 루프에서 실행되어야
+    한다. Channels의 InMemoryChannelLayer는 채널마다 asyncio.Queue를 만들어
+    사용하는데, 이 큐는 그것을 생성/대기하는 이벤트 루프에 종속된다. 별도
+    스레드에서 독립된 이벤트 루프를 만들어 group_send()를 호출하면(과거
+    구현), WebSocket Consumer가 대기 중인 큐의 Future를 다른 스레드에서
+    깨우게 되어 즉시 전달되지 않고 쌓였다가 메인 루프가 우연히 다시 깨어날
+    때 한꺼번에 배출되는 현상(버퍼링처럼 보이는 끊김)이 발생했다.
+
+    여러 시작 경로가 중복 호출할 수 있으므로 멱등하게 동작한다.
+    """
+    global _listener_started
+    if _listener_started or not _should_start():
+        return
+    _listener_started = True
+
+    from channels.layers import get_channel_layer
+    from django.conf import settings
+
+    port: int = getattr(settings, "UDP_PORT", 49100)
     loop = asyncio.get_running_loop()
     channel_layer = get_channel_layer()
 
@@ -179,46 +222,11 @@ async def _udp_listen(port: int) -> None:
         local_addr=("0.0.0.0", port),
     )
     logger.info("UDP 리스너 시작: 0.0.0.0:%d", port)
-    try:
-        await asyncio.Future()
-    finally:
+    _transports.append(transport)
+
+
+def stop_udp_listener() -> None:
+    """ASGI lifespan shutdown 시점에 호출되어 UDP 소켓을 정리한다."""
+    for transport in _transports:
         transport.close()
-        logger.info("UDP 리스너 종료")
-
-
-# ─── 진입점 ───────────────────────────────────────────────────
-def start_udp_listener() -> None:
-    """별도 스레드에서 asyncio 이벤트 루프를 돌려 UDP 수신을 시작.
-
-    Django runserver는 두 프로세스를 사용:
-      - 외부(reloader) 프로세스: RUN_MAIN 미설정, channel layer 공유 불가
-      - 내부(app)      프로세스: RUN_MAIN="true", 실제 channel layer 보유
-    UDP 리스너는 내부 프로세스에서만 실행해야 한다.
-    """
-    import sys
-
-    using_runserver = any("runserver" in arg for arg in sys.argv)
-    run_main = os.environ.get("RUN_MAIN")
-
-    if using_runserver and run_main != "true":
-        # 자동 재로더 외부 프로세스 → 스킵 (--noreload 예외)
-        if "--noreload" not in sys.argv:
-            return
-
-    from django.conf import settings
-
-    port: int = getattr(settings, "UDP_PORT", 49100)
-
-    def _run() -> None:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            loop.run_until_complete(_udp_listen(port))
-        except Exception:
-            logger.exception("UDP 리스너 비정상 종료")
-        finally:
-            loop.close()
-
-    thread = threading.Thread(target=_run, daemon=True, name="udp-listener")
-    thread.start()
-    logger.info("UDP 리스너 스레드 시작 (포트 %d)", port)
+    _transports.clear()
