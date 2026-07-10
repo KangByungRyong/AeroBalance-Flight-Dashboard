@@ -194,6 +194,7 @@ const GRID_CONFIGS = {
   '2x2': { cols: 2, rows: 2 },
   '3x3': { cols: 3, rows: 3 },
   '4x3': { cols: 4, rows: 3 },
+  '2x6': { cols: 2, rows: 6 },
 };
 
 // ═══════════════════════════════════════════════════════
@@ -533,8 +534,8 @@ function makeStylePanel(chart, anchorEl) {
     <div class="sp-section sp-section-sep">
       <div class="sp-section-title">Y축 범위</div>
       <div class="sp-yaxis-row">
-        <label class="sp-yaxis-label">Min<input type="number" class="sp-ymin sp-num-input" placeholder="auto" value="${chart.yMin ?? ''}"></label>
-        <label class="sp-yaxis-label">Max<input type="number" class="sp-ymax sp-num-input" placeholder="auto" value="${chart.yMax ?? ''}"></label>
+        <label class="sp-yaxis-label">Min<input type="text" inputmode="decimal" class="sp-ymin sp-num-input" placeholder="auto" value="${chart.yMin ?? ''}"></label>
+        <label class="sp-yaxis-label">Max<input type="text" inputmode="decimal" class="sp-ymax sp-num-input" placeholder="auto" value="${chart.yMax ?? ''}"></label>
         <button class="sp-yaxis-apply">적용</button>
       </div>
     </div>
@@ -572,10 +573,14 @@ function makeStylePanel(chart, anchorEl) {
   panel.querySelector('.sp-yaxis-apply').addEventListener('click', () => {
     const minStr = panel.querySelector('.sp-ymin').value.trim();
     const maxStr = panel.querySelector('.sp-ymax').value.trim();
-    chart.yMin = minStr !== '' ? parseFloat(minStr) : null;
-    chart.yMax = maxStr !== '' ? parseFloat(maxStr) : null;
+    const minVal = parseFloat(minStr);
+    const maxVal = parseFloat(maxStr);
+    chart.yMin = Number.isFinite(minVal) ? minVal : null;
+    chart.yMax = Number.isFinite(maxVal) ? maxVal : null;
     rebuildUplot(chart);
   });
+  attachNumKeypad(panel.querySelector('.sp-ymin'));
+  attachNumKeypad(panel.querySelector('.sp-ymax'));
 
   // --- 채널 추가 ---
   const addGroupSel   = panel.querySelector('.sp-add-group');
@@ -627,6 +632,73 @@ function makeStylePanel(chart, anchorEl) {
   });
 
   anchorEl.appendChild(panel);
+}
+
+// ═══════════════════════════════════════════════════════
+// 7-1. NUMERIC KEYPAD (touch input popup)
+// ═══════════════════════════════════════════════════════
+const NK_KEYS_DECIMAL = ['7','8','9','4','5','6','1','2','3','-','0','.'];
+const NK_KEYS_INTEGER = ['7','8','9','4','5','6','1','2','3','0'];
+
+function attachNumKeypad(inputEl, opts = {}) {
+  if (!inputEl) return;
+  inputEl.readOnly = true;
+  inputEl.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openNumKeypad(inputEl, opts);
+  });
+}
+
+function openNumKeypad(inputEl, opts = {}) {
+  document.querySelector('.num-keypad')?.remove();
+
+  const keys = opts.integerOnly ? NK_KEYS_INTEGER : NK_KEYS_DECIMAL;
+  const keypad = document.createElement('div');
+  keypad.className = 'num-keypad';
+  keypad.innerHTML = `
+    <div class="nk-grid">
+      ${keys.map(k => `<button type="button" data-k="${k}">${k}</button>`).join('')}
+    </div>
+    <div class="nk-actions">
+      <button type="button" class="nk-backspace">⌫</button>
+      <button type="button" class="nk-ok">확인</button>
+    </div>`;
+  document.body.appendChild(keypad);
+
+  const rect   = inputEl.getBoundingClientRect();
+  const kpRect = keypad.getBoundingClientRect();
+  let left = rect.left;
+  let top  = rect.bottom + 4;
+  if (left + kpRect.width  > window.innerWidth)  left = window.innerWidth  - kpRect.width  - 4;
+  if (top  + kpRect.height > window.innerHeight) top  = rect.top - kpRect.height - 4;
+  keypad.style.left = `${Math.max(4, left)}px`;
+  keypad.style.top  = `${Math.max(4, top)}px`;
+
+  keypad.querySelectorAll('.nk-grid button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const k = btn.dataset.k;
+      if (k === '-') {
+        inputEl.value = inputEl.value.startsWith('-') ? inputEl.value.slice(1) : '-' + inputEl.value;
+      } else if (k === '.') {
+        if (!inputEl.value.includes('.')) inputEl.value += '.';
+      } else {
+        inputEl.value += k;
+      }
+    });
+  });
+  keypad.querySelector('.nk-backspace').addEventListener('click', () => {
+    inputEl.value = inputEl.value.slice(0, -1);
+  });
+  keypad.querySelector('.nk-ok').addEventListener('click', closeNumKeypad);
+
+  function outsideClick(e) {
+    if (!keypad.contains(e.target) && e.target !== inputEl) closeNumKeypad();
+  }
+  function closeNumKeypad() {
+    keypad.remove();
+    document.removeEventListener('mousedown', outsideClick, true);
+  }
+  setTimeout(() => document.addEventListener('mousedown', outsideClick, true), 0);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -873,8 +945,10 @@ function attachSplitter(el, axis, idx) {
     const MIN = 80;
 
     const update = sizes => {
+      // fr 단위로 기록 — 트랙 간 비율만 유지하고 실제 폭은 컨테이너 크기에 비례해
+      // 자동 재분배되도록 함 (창 크기 변경 시에도 화면에 동적으로 맞춰짐)
       const parts = [];
-      sizes.forEach((s, i) => { parts.push(`${s}px`); if (i < sizes.length-1) parts.push('4px'); });
+      sizes.forEach((s, i) => { parts.push(`${s}fr`); if (i < sizes.length-1) parts.push('4px'); });
       const tpl = parts.join(' ');
       if (axis === 'col') dockArea.style.gridTemplateColumns = tpl;
       else                dockArea.style.gridTemplateRows    = tpl;
@@ -1050,6 +1124,9 @@ function initToolbar() {
   const colsInput  = document.getElementById('grid-cols-input');
   const rowsInput  = document.getElementById('grid-rows-input');
   const btnCustom  = document.getElementById('btn-grid-custom');
+
+  attachNumKeypad(colsInput, { integerOnly: true });
+  attachNumKeypad(rowsInput, { integerOnly: true });
 
   btnCustom.addEventListener('click', () => {
     const cols = Math.max(1, Math.min(8, parseInt(colsInput.value) || 2));

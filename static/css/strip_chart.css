@@ -207,16 +207,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 6px;
+  padding: 0 9px;
   background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
-  height: 26px;
+  height: 39px;
   position: relative;
 }
 
 .cell-title {
-  font-size: 0.75rem;
+  font-size: 1.125rem;
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
@@ -225,15 +225,15 @@
   flex: 1;
 }
 
-.cell-controls { display: flex; gap: 1px; flex-shrink: 0; }
+.cell-controls { display: flex; gap: 2px; flex-shrink: 0; }
 .cell-controls button {
   background: none;
   border: none;
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 1.08rem;
   cursor: pointer;
-  padding: 2px 5px;
-  border-radius: 3px;
+  padding: 3px 8px;
+  border-radius: 4px;
   line-height: 1;
 }
 .cell-controls button:hover { color: var(--text-primary); background: var(--border-color); }
@@ -295,17 +295,17 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 8px;
+  padding: 0 12px;
   background: var(--bg-tertiary);
   border-bottom: 1px solid var(--border-color);
   cursor: move;
   flex-shrink: 0;
-  height: 28px;
+  height: 42px;
   user-select: none;
 }
 
 .popup-title {
-  font-size: 0.76rem;
+  font-size: 1.14rem;
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
@@ -314,15 +314,15 @@
   flex: 1;
 }
 
-.popup-controls { display: flex; gap: 1px; flex-shrink: 0; }
+.popup-controls { display: flex; gap: 2px; flex-shrink: 0; }
 .popup-controls button {
   background: none;
   border: none;
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 1.17rem;
   cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 3px;
+  padding: 3px 9px;
+  border-radius: 4px;
   line-height: 1;
   pointer-events: auto;
   position: relative;
@@ -572,6 +572,56 @@ label.sp-yaxis-label {
   cursor: pointer;
 }
 .sp-close-btn:hover { color: var(--text-primary); }
+
+/* ─── Numeric Keypad (touch input popup) ───────────────── */
+.num-keypad {
+  position: fixed;
+  z-index: 200;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 8px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.nk-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 40px);
+  gap: 6px;
+}
+.nk-grid button {
+  width: 40px;
+  height: 36px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.nk-grid button:hover { border-color: var(--accent-active); color: var(--accent-active); }
+.nk-actions { display: flex; gap: 6px; }
+.nk-backspace, .nk-ok {
+  flex: 1;
+  height: 32px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.nk-backspace {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+}
+.nk-backspace:hover { color: var(--text-primary); }
+.nk-ok {
+  background: var(--accent-active);
+  border: none;
+  color: #fff;
+}
+.nk-ok:hover { opacity: 0.85; }
 
 /* ─── Clear Button ───────────────────────────────────── */
 #btn-clear-layout {
