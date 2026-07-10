@@ -20,7 +20,6 @@ db.sqlite3
 media/
 
 # Environment
-.env
 
 # macOS
 .DS_Store
