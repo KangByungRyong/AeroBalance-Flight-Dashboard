@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Flight Planning — Flight Monitor{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="{% static 'css/flight_planning.css' %}">
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div id="fp-layout">
+
+  <!-- 좌측: FPL 목록 -->
+  <aside id="fp-list-panel">
+    <div class="fp-list-header">
+      <span>Flight Plan 목록</span>
+      <button id="fp-new-btn" class="btn btn-sm btn-outline-light">+ 신규</button>
+    </div>
+    <ul id="fp-list">
+      {% for plan in plans %}
+      <li class="fp-list-item" data-id="{{ plan.id }}">
+        <div class="fp-item-name">{{ plan.name }}</div>
+        <div class="fp-item-sub">{{ plan.dep|default:"?" }} → {{ plan.arr|default:"?" }}</div>
+      </li>
+      {% empty %}
+      <li class="fp-list-empty">저장된 Flight Plan이 없습니다.</li>
+      {% endfor %}
+    </ul>
+  </aside>
+
+  <!-- 우측: 지도 + 편집 폼 -->
+  <div id="fp-edit-panel">
+    <div id="fp-map-wrapper">
+      <div id="fp-map"></div>
+      <div id="fp-context-menu" class="fp-context-menu" style="display:none;"></div>
+    </div>
+
+    <div id="fp-form-panel">
+      <input type="hidden" id="fp-id" value="">
+
+      <div class="fp-form-row">
+        <label>이름</label>
+        <input type="text" id="fp-name" class="form-control form-control-sm" placeholder="예: Yeoui-Do -> Jamsil">
+        <label>기종</label>
+        <input type="text" id="fp-aircraft-type" class="form-control form-control-sm">
+        <label>출발지 ICAO</label>
+        <input type="text" id="fp-dep" class="form-control form-control-sm" maxlength="8">
+        <label>목적지 ICAO</label>
+        <input type="text" id="fp-arr" class="form-control form-control-sm" maxlength="8">
+        <label>도착 예정시각 (ETA)</label>
+        <input type="datetime-local" id="fp-eta" class="form-control form-control-sm" step="1">
+      </div>
+
+      <div class="fp-point-grid">
+        <fieldset class="fp-point-box">
+          <legend>출발점</legend>
+          <input type="text" id="dep-name" placeholder="이름" class="form-control form-control-sm">
+          <input type="number" id="dep-lat" placeholder="위도" step="0.000001" class="form-control form-control-sm">
+          <input type="number" id="dep-lon" placeholder="경도" step="0.000001" class="form-control form-control-sm">
+          <input type="number" id="dep-alt" placeholder="고도(ft)" class="form-control form-control-sm">
+          <input type="number" id="dep-velocity" placeholder="속도(kt)" class="form-control form-control-sm">
+        </fieldset>
+        <fieldset class="fp-point-box">
+          <legend>도착점</legend>
+          <input type="text" id="arr-name" placeholder="이름" class="form-control form-control-sm">
+          <input type="number" id="arr-lat" placeholder="위도" step="0.000001" class="form-control form-control-sm">
+          <input type="number" id="arr-lon" placeholder="경도" step="0.000001" class="form-control form-control-sm">
+          <input type="number" id="arr-alt" placeholder="고도(ft)" class="form-control form-control-sm">
+          <input type="number" id="arr-velocity" placeholder="속도(kt)" class="form-control form-control-sm">
+        </fieldset>
+      </div>
+
+      <div class="fp-waypoints-block">
+        <div class="fp-waypoints-header">경유점 (지도 우클릭으로 추가)</div>
+        <table class="fp-waypoints-table">
+          <thead>
+            <tr><th>#</th><th>이름</th><th>위도</th><th>경도</th><th>고도(ft)</th><th>속도(kt)</th><th></th></tr>
+          </thead>
+          <tbody id="fp-waypoints-tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="fp-schedule-block">
+        <button id="fp-preview-btn" class="btn btn-sm btn-outline-info">EOBT 계산 미리보기</button>
+        <span id="fp-schedule-result" class="fp-schedule-result">EOBT: —</span>
+      </div>
+
+      <div class="fp-actions">
+        <button id="fp-save-btn" class="btn btn-sm btn-primary">저장</button>
+        <button id="fp-save-as-btn" class="btn btn-sm btn-outline-primary">다른 이름으로 저장</button>
+        <button id="fp-delete-btn" class="btn btn-sm btn-outline-danger" disabled>삭제</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'js/flight_planning.js' %}"></script>
+{% endblock %}

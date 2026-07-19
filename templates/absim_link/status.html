@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}REST 연동 상태 — Flight Monitor{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/udp_status.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="udp-status-page p-4">
+
+  <!-- 페이지 헤더 -->
+  <div class="page-header mb-4">
+    <h4 class="mb-0">ABSim-Dashboard REST 연동 상태</h4>
+    <span class="text-muted small">ABFAP → ABSim-Dashboard(WS#3) 항적/상태 폴링 현황</span>
+  </div>
+
+  <div class="row g-3">
+
+    <!-- ── 설정 정보 ───────────────────────────────────── -->
+    <div class="col-12 col-xl-4">
+      <div class="status-card">
+        <div class="card-label">연동 설정</div>
+        <table class="config-table">
+          <tbody>
+            <tr>
+              <th>Dashboard URL</th>
+              <td id="cfg-base-url">{{ dashboard_base_url|default:"(미설정)" }}</td>
+            </tr>
+            <tr>
+              <th>폴링 주기</th>
+              <td id="cfg-poll-interval">{{ poll_interval_sec }}초</td>
+            </tr>
+            <tr>
+              <th>항적 조회</th>
+              <td>GET /api/abfap/tracks/</td>
+            </tr>
+            <tr>
+              <th>상태 조회</th>
+              <td>GET /api/abfap/model-status/</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── 연결 상태 ───────────────────────────────────── -->
+    <div class="col-12 col-xl-4">
+      <div class="status-card">
+        <div class="card-label">연결 상태</div>
+
+        <div class="connection-state mb-3">
+          <span id="conn-dot" class="conn-dot conn-idle"></span>
+          <span id="conn-text" class="conn-text">대기 중...</span>
+        </div>
+
+        <table class="config-table">
+          <tbody>
+            <tr>
+              <th>마지막 성공</th>
+              <td><span id="since-last">—</span></td>
+            </tr>
+            <tr>
+              <th>성공 횟수</th>
+              <td><span id="poll-count">0</span></td>
+            </tr>
+            <tr>
+              <th>실패 횟수</th>
+              <td><span id="error-count">0</span></td>
+            </tr>
+            <tr>
+              <th>마지막 오류</th>
+              <td><span id="last-error">—</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── 최신 수신 요약 ────────────────────────────────── -->
+    <div class="col-12 col-xl-4">
+      <div class="status-card">
+        <div class="card-label">최신 수신 요약</div>
+        <div class="snapshot-grid">
+          <div class="snap-item snap-wide">
+            <span class="snap-label">항적 (tracks)</span>
+            <span id="snap-track-count" class="snap-value">—</span>
+            <span class="snap-unit">개 Model</span>
+          </div>
+          <div class="snap-item snap-wide">
+            <span class="snap-label">상태 (model-status)</span>
+            <span id="snap-model-count" class="snap-value">—</span>
+            <span class="snap-unit">개 Model</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/absim_status.js' %}"></script>
+{% endblock %}

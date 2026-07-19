@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Flight Plan Injection — Flight Monitor{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="{% static 'css/flight_plan_injection.css' %}">
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div id="inj-layout">
+
+  <!-- 상단 툴바 -->
+  <div id="inj-toolbar">
+    <label>Flight Plan</label>
+    <select id="inj-plan-select" class="form-select form-select-sm">
+      <option value="">선택하세요</option>
+      {% for plan in plans %}
+      <option value="{{ plan.id }}">{{ plan.name }}</option>
+      {% endfor %}
+    </select>
+
+    <label>대상 Model</label>
+    <select id="inj-model-select" class="form-select form-select-sm">
+      <option value="">선택하세요</option>
+    </select>
+
+    <label>Callsign</label>
+    <input type="text" id="inj-callsign" class="form-control form-control-sm" placeholder="(Model명 기본)">
+
+    <label>Departure Offset (분)</label>
+    <input type="number" id="inj-offset-min" class="form-control form-control-sm" min="0" step="1" value="1">
+
+    <button id="inj-preview-btn" class="btn btn-sm btn-outline-info">전송 원문 미리보기</button>
+    <button id="inj-send-btn" class="btn btn-sm btn-primary">Injection 전송</button>
+  </div>
+
+  <div id="inj-body">
+    <!-- 좌측: 소형 지도 -->
+    <div id="inj-map-wrapper">
+      <div id="inj-map"></div>
+    </div>
+
+    <!-- 우측: 미리보기 JSON -->
+    <div id="inj-preview-wrapper">
+      <div class="inj-panel-label">전송 원문 (JSON)</div>
+      <pre id="inj-preview-json">—</pre>
+      <div id="inj-result" class="inj-result"></div>
+    </div>
+  </div>
+
+  <!-- 하단: 이력 테이블 -->
+  <div id="inj-history-wrapper">
+    <div class="inj-panel-label">Injection 이력</div>
+    <table class="inj-history-table">
+      <thead>
+        <tr>
+          <th>시각</th><th>FPL명</th><th>대상</th><th>Callsign</th><th>GufiID</th><th>결과</th><th>오류</th>
+        </tr>
+      </thead>
+      <tbody id="inj-history-tbody">
+        {% for h in history %}
+        <tr>
+          <td>{{ h.injected_at|date:"Y-m-d H:i:s" }}</td>
+          <td>{{ h.flight_plan_name }}</td>
+          <td>{{ h.target_model_name }}</td>
+          <td>{{ h.callsign }}</td>
+          <td>{{ h.gufi_id }}</td>
+          <td>{% if h.success %}<span class="inj-ok">성공</span>{% else %}<span class="inj-fail">실패</span>{% endif %}</td>
+          <td>{{ h.error_message }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="{% static 'js/flight_plan_injection.js' %}"></script>
+{% endblock %}

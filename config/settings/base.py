@@ -21,8 +21,11 @@ INSTALLED_APPS = [
     "channels",
     # Local
     "apps.udp_receiver",
+    "apps.absim_link",
     "apps.map_view",
     "apps.strip_chart",
+    "apps.flight_planning",
+    "apps.flight_plan_injection",
     "apps.data_management",
     "apps.replay",
 ]
@@ -102,3 +105,8 @@ UDP_PORT: int = env.int("UDP_PORT", default=49100)
 XPLANE_IP: str = env("XPLANE_IP", default="10.0.0.110")
 
 STRIP_CHART_PRESETS_DIR: Path = BASE_DIR / "data" / "strip_chart_presets"
+
+# ABSim-Dashboard(WS#3) REST 연동 (docs/ABFAP_Export_Interface.md)
+ABSIM_DASHBOARD_BASE_URL: str = env("ABSIM_DASHBOARD_BASE_URL", default="")
+ABSIM_POLL_INTERVAL_SEC: float = env.float("ABSIM_POLL_INTERVAL_SEC", default=1.0)
+ABSIM_REQUEST_TIMEOUT_SEC: float = env.float("ABSIM_REQUEST_TIMEOUT_SEC", default=2.0)

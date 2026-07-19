@@ -11,6 +11,26 @@
   #map-wrapper { position: relative; width: 100%; height: 100%; }
   #map { width: 100%; height: 100%; }
 
+  /* ── ABSim-Dashboard 항적 마커 (기체 + Callsign 라벨) ───── */
+  .absim-track-marker {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform: translate(-50%, -50%);
+  }
+  .absim-track-label {
+    margin-top: 1px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: #fff;
+    background: rgba(13, 13, 26, 0.78);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 1px 5px;
+    border-radius: 3px;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
   /* ── HUD 오버레이 ─────────────────────────────── */
   #hud {
     position: absolute;

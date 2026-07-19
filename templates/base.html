@@ -53,6 +53,18 @@
             <span class="label">Data Chart</span>
           </a>
         </li>
+        <li class="{% if active_page == 'flight_planning' %}active{% endif %}">
+          <a href="{% url 'flight_planning:index' %}" title="Flight Planning">
+            <span class="icon">🧭</span>
+            <span class="label">Flight Planning</span>
+          </a>
+        </li>
+        <li class="{% if active_page == 'flight_plan_injection' %}active{% endif %}">
+          <a href="{% url 'flight_plan_injection:index' %}" title="Flight Plan Injection">
+            <span class="icon">🛫</span>
+            <span class="label">Flight Plan Injection</span>
+          </a>
+        </li>
         <li class="{% if active_page == 'management' %}active{% endif %}">
           <a href="{% url 'data_management:index' %}" title="데이터 관리">
             <span class="icon">📋</span>
@@ -72,6 +84,12 @@
           <a href="{% url 'udp_receiver:status' %}" title="UDP 연결 상태">
             <span class="icon">📡</span>
             <span class="label">UDP 상태</span>
+          </a>
+        </li>
+        <li class="{% if active_page == 'rest_status' %}active{% endif %}">
+          <a href="{% url 'absim_link:status' %}" title="ABSim-Dashboard REST 연동 상태">
+            <span class="icon">🔗</span>
+            <span class="label">REST 상태</span>
           </a>
         </li>
       </ul>
