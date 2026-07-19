@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "apps.strip_chart",
     "apps.flight_planning",
     "apps.flight_plan_injection",
+    "apps.pilot_flight",
     "apps.data_management",
     "apps.replay",
 ]
@@ -110,3 +111,20 @@ STRIP_CHART_PRESETS_DIR: Path = BASE_DIR / "data" / "strip_chart_presets"
 ABSIM_DASHBOARD_BASE_URL: str = env("ABSIM_DASHBOARD_BASE_URL", default="")
 ABSIM_POLL_INTERVAL_SEC: float = env.float("ABSIM_POLL_INTERVAL_SEC", default=1.0)
 ABSIM_REQUEST_TIMEOUT_SEC: float = env.float("ABSIM_REQUEST_TIMEOUT_SEC", default=2.0)
+
+# 데이터 관리 — 비행 세션 저장 (CLAUDE.md §10)
+FLIGHT_DATA_FLUSH_INTERVAL_SEC: float = env.float("FLIGHT_DATA_FLUSH_INTERVAL_SEC", default=1.0)
+SESSION_AUTO_END_TIMEOUT_SEC: float = env.float("SESSION_AUTO_END_TIMEOUT_SEC", default=60.0)
+SESSION_WATCHDOG_INTERVAL_SEC: float = env.float("SESSION_WATCHDOG_INTERVAL_SEC", default=5.0)
+
+# 데이터 관리 — 보존 기간 정책(아카이브, CLAUDE.md §10): FlightData/AbsimTrackLog가
+# 50Hz 원본 저장으로 용량이 빠르게 늘어나(1시간 비행 ≈ 700MB) 오래된 세션은
+# gzip JSON으로 내보낸 뒤 DB에서 삭제한다.
+SESSION_RETENTION_DAYS: int = env.int("SESSION_RETENTION_DAYS", default=30)
+SESSION_RETENTION_SWEEP_INTERVAL_SEC: float = env.float(
+    "SESSION_RETENTION_SWEEP_INTERVAL_SEC", default=3600.0
+)
+SESSION_ARCHIVE_DIR: Path = BASE_DIR / "data" / "session_archives"
+
+# 데이터 관리 — DB 용량 모니터링 (CLAUDE.md §10)
+DB_CAPACITY_LIMIT_GB: float = env.float("DB_CAPACITY_LIMIT_GB", default=500.0)

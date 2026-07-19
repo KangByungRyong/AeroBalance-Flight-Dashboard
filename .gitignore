@@ -37,3 +37,6 @@ media/
 
 # Static collected
 staticfiles/
+
+# 세션 아카이브 (용량이 큰 gzip JSON — CLAUDE.md §10)
+data/session_archives/

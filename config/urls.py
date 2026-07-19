@@ -9,6 +9,7 @@ urlpatterns = [
     path("chart/", include("apps.strip_chart.urls")),
     path("flight-planning/", include("apps.flight_planning.urls")),
     path("flight-plan-injection/", include("apps.flight_plan_injection.urls")),
+    path("pilot-flight/", include("apps.pilot_flight.urls")),
     path("management/", include("apps.data_management.urls")),
     path("replay/", include("apps.replay.urls")),
     path("udp/", include("apps.udp_receiver.urls")),

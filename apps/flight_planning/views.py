@@ -2,12 +2,14 @@ import json
 from datetime import datetime
 
 from django.db import transaction
-from django.http import HttpRequest, JsonResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from django.views import View
 from django.views.generic import TemplateView
 
 from .eobt import ScheduleError, compute_schedule
+from .fms import build_fms_filename, build_fms_text
 from .models import FlightPlan, FlightPlanWaypoint
 
 
@@ -174,6 +176,48 @@ class FlightPlanSaveView(View):
         data = plan.to_dict()
         data["schedule"] = _schedule_preview(plan)
         return JsonResponse(data)
+
+
+class FlightPlanFmsExportView(View):
+    """저장된 FlightPlan → X-Plane `.fms`(v11) 파일 다운로드 (`CLAUDE.md` §10, `fms.py` 참고)."""
+
+    def get(self, request: HttpRequest, pk: int) -> HttpResponse:
+        plan = FlightPlan.objects.prefetch_related("waypoints").filter(pk=pk).first()
+        if plan is None:
+            return JsonResponse({"error": "Flight Plan을 찾을 수 없습니다."}, status=404)
+
+        callsign = (request.GET.get("callsign") or plan.name).strip()
+        text = build_fms_text(plan.to_dict())
+        filename = build_fms_filename(callsign, timezone.now())
+
+        response = HttpResponse(text, content_type="application/octet-stream")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
+
+
+class FlightPlanFmsPreviewExportView(View):
+    """편집 중(저장 여부 무관)인 좌표로 `.fms` 파일을 생성해 다운로드한다
+    (`pilot_flight` 페이지 — Edit Box로 조정한 값을 그대로 반영, `fms.py` 참고)."""
+
+    def post(self, request: HttpRequest) -> HttpResponse:
+        try:
+            payload = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "invalid JSON"}, status=400)
+
+        departure = payload.get("departure") or {}
+        arrival = payload.get("arrival") or {}
+        for label, point in (("departure", departure), ("arrival", arrival)):
+            if point.get("lat") is None or point.get("lon") is None:
+                return JsonResponse({"error": f"{label}의 위치(lat/lon)를 지정하세요."}, status=400)
+
+        callsign = (payload.get("callsign") or "FLIGHT").strip()
+        text = build_fms_text(payload)
+        filename = build_fms_filename(callsign, timezone.now())
+
+        response = HttpResponse(text, content_type="application/octet-stream")
+        response["Content-Disposition"] = f'attachment; filename="{filename}"'
+        return response
 
 
 class FlightPlanDeleteView(View):

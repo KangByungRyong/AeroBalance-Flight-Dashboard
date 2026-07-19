@@ -65,6 +65,12 @@
             <span class="label">Flight Plan Injection</span>
           </a>
         </li>
+        <li class="{% if active_page == 'pilot_flight' %}active{% endif %}">
+          <a href="{% url 'pilot_flight:index' %}" title="Pilot Flight">
+            <span class="icon">🧑‍✈️</span>
+            <span class="label">Pilot Flight</span>
+          </a>
+        </li>
         <li class="{% if active_page == 'management' %}active{% endif %}">
           <a href="{% url 'data_management:index' %}" title="데이터 관리">
             <span class="icon">📋</span>
@@ -109,6 +115,7 @@
   {% load static %}
   <script src="{% static 'js/sidebar.js' %}"></script>
   <script src="{% static 'js/ws_client.js' %}"></script>
+  <script src="{% static 'js/session_status.js' %}"></script>
 
   {% block extra_js %}{% endblock %}
 </body>

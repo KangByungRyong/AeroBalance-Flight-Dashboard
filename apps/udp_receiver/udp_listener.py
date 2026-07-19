@@ -38,6 +38,57 @@ class _UdpStatus:
 udp_status = _UdpStatus()
 _transports: list = []
 
+# ─── 비행 데이터 저장 버퍼 (CLAUDE.md §10) ─────────────────────
+# 활성 세션이 있는 동안에만 채워지고, 주기적으로 bulk_create로 flush된다.
+# 패킷마다 동기 저장하면 20ms 주기를 못 맞춰 이벤트루프가 막히므로 버퍼링한다.
+_flight_data_buffer: list = []
+
+
+def _payload_to_flight_data(session_id: int, payload: dict):
+    """수신된 패킷을 하나도 빠짐없이 FlightData 1행으로 만든다 — X-Plane이 이번
+    패킷에 실제로 보낸 그룹이 무엇이든(위치 그룹이 없어도) 저장한다. 요약
+    컬럼(lat/lon 등)은 없으면 NULL — 값을 지어내지 않는다. 원본은 항상
+    `params`(raw 그룹 포함, `_parse()` 참고)에 그대로 들어있다."""
+    from apps.data_management.models import FlightData
+
+    return FlightData(
+        session_id=session_id,
+        timestamp=payload["ts"],
+        lat=payload.get("lat"),
+        lon=payload.get("lon"),
+        alt_ft=payload.get("alt_ft"),
+        ias_kt=payload.get("ias_kt"),
+        tas_kt=payload.get("tas_kt"),
+        gs_kt=payload.get("gs_kt"),
+        heading=payload.get("heading"),
+        pitch=payload.get("pitch"),
+        roll=payload.get("roll"),
+        params=payload.get("params", {}),
+    )
+
+
+async def _flush_flight_data_loop() -> None:
+    from asgiref.sync import sync_to_async
+    from django.conf import settings
+
+    from apps.data_management.models import FlightData
+
+    interval = getattr(settings, "FLIGHT_DATA_FLUSH_INTERVAL_SEC", 1.0)
+    while True:
+        await asyncio.sleep(interval)
+        if not _flight_data_buffer:
+            continue
+        batch = _flight_data_buffer[:]
+        _flight_data_buffer.clear()
+        try:
+            await sync_to_async(FlightData.objects.bulk_create)(batch)
+        except Exception:
+            # 유실 방지 — 다음 flush 주기에 재시도(DB 일시 장애 대비). DB가
+            # 장시간 다운되면 버퍼가 계속 자라나므로, 장애가 길어질 경우
+            # 별도 대응이 필요할 수 있음(§10 미확정 항목 참고 가치).
+            logger.exception("FlightData bulk_create 실패 — 다음 주기에 재시도 (%d건)", len(batch))
+            _flight_data_buffer[:0] = batch
+
 
 # ─── 파서 ─────────────────────────────────────────────────────
 def _parse(data: bytes) -> dict:
@@ -57,6 +108,11 @@ def _parse(data: bytes) -> dict:
         offset += _RECORD_SIZE
 
         if group_idx not in GROUP_MAP:
+            # dataref_config.py에 아직 등록 안 된 그룹도 원본 8-float를 그대로
+            # 보존한다 — X-Plane이 실제로 보낸 데이터를 이름 매핑이 없다는
+            # 이유로 버리지 않기 위함(CLAUDE.md §10 "UDP 정보 전체 저장" 요구).
+            # 필드명 매핑은 없지만 수치 자체는 유실 없이 params에 남는다.
+            groups[f"_unknown_{group_idx}"] = list(values)
             continue
 
         group_def = GROUP_MAP[group_idx]
@@ -158,6 +214,12 @@ class _XPlaneProtocol(asyncio.DatagramProtocol):
             now = time.time()
             _update_status(payload, addr, now)
 
+            from apps.data_management.session_state import get_active_session_id
+
+            session_id = get_active_session_id()
+            if session_id is not None:
+                _flight_data_buffer.append(_payload_to_flight_data(session_id, payload))
+
             asyncio.ensure_future(
                 self.channel_layer.group_send(
                     "flight_data",
@@ -223,6 +285,8 @@ async def start_udp_listener() -> None:
     )
     logger.info("UDP 리스너 시작: 0.0.0.0:%d", port)
     _transports.append(transport)
+
+    asyncio.ensure_future(_flush_flight_data_loop())
 
 
 def stop_udp_listener() -> None:

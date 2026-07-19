@@ -1,0 +1,191 @@
+/* Pilot Flight 페이지 전용 스타일 */
+
+#content { padding: 0 !important; overflow: hidden !important; }
+
+#pf-layout {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+/* ─── 상단 툴바 ───────────────────────────────── */
+#pf-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+#pf-toolbar label {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  margin-left: 8px;
+}
+#pf-toolbar label:first-child { margin-left: 0; }
+#pf-toolbar select, #pf-toolbar input[type="text"] { width: auto; min-width: 160px; }
+
+.pf-inline-form {
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+.pf-inline-form input { width: auto; min-width: 140px; }
+
+.pf-active-banner {
+  background: var(--accent-blue);
+  border-left: 3px solid var(--accent-active);
+  padding: 6px 16px;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+}
+
+.pf-fms-hint {
+  padding: 4px 16px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+.pf-fms-hint code {
+  background: var(--bg-tertiary);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+/* ─── 본문: 지도 + Edit Box ───────────────────── */
+#pf-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+#pf-map-wrapper { position: relative; width: 50%; min-width: 320px; height: 100%; }
+#pf-map { width: 100%; height: 100%; }
+
+.fp-fix-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.fp-fix-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 4px rgba(0,0,0,0.6);
+  pointer-events: auto;
+}
+.fp-fix-label {
+  font-size: 0.65rem;
+  color: #fff;
+  background: rgba(13,13,26,0.75);
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+.pf-context-menu {
+  position: absolute;
+  z-index: 2000;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  min-width: 160px;
+  overflow: hidden;
+}
+.fp-menu-item {
+  padding: 8px 14px;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.fp-menu-item:hover { background: var(--accent-blue); }
+
+#pf-edit-wrapper {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 14px 18px;
+  border-left: 1px solid var(--border-color);
+  background: var(--bg-primary);
+}
+.pf-panel-label {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+}
+
+.pf-point-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.pf-point-box {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pf-point-box legend {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  width: auto;
+  padding: 0 4px;
+}
+
+.pf-waypoints-block { margin-bottom: 12px; }
+.pf-waypoints-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+}
+.pf-waypoints-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.pf-waypoints-table th {
+  color: var(--text-muted);
+  font-weight: 400;
+  text-align: left;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border-color);
+}
+.pf-waypoints-table td {
+  padding: 3px 6px;
+  border-bottom: 1px solid var(--border-color);
+}
+.pf-waypoints-table input {
+  width: 100%;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.78rem;
+}
+.fp-wp-remove {
+  cursor: pointer;
+  color: var(--text-muted);
+  border: none;
+  background: none;
+}
+.fp-wp-remove:hover { color: var(--accent-active); }

@@ -45,6 +45,40 @@ def _should_start() -> bool:
     return True
 
 
+async def _save_track_log(polled_at: float, tracks: list) -> None:
+    """활성 세션이 있을 때만 폴링된 전체 Model 배열을 그대로 저장 (`CLAUDE.md` §10)."""
+    from asgiref.sync import sync_to_async
+
+    from apps.data_management.models import AbsimTrackLog
+
+    records = [
+        AbsimTrackLog(
+            polled_at=polled_at,
+            model_name=t.get("model", ""),
+            callsign=t.get("callsign") or "",
+            gufi_id=t.get("gufi_id") or "",
+            lat=t.get("lat", 0.0),
+            lon=t.get("lon", 0.0),
+            alt=t.get("alt", 0.0),
+            hdg=t.get("hdg", 0.0),
+            pitch=t.get("pitch", 0.0),
+            roll=t.get("roll", 0.0),
+            spd=t.get("spd", 0.0),
+            tas=t.get("tas", 0.0),
+            cas=t.get("cas", 0.0),
+            uam_status=t.get("uam_status") or "",
+            udp_connected=bool(t.get("udp_connected")),
+        )
+        for t in tracks
+    ]
+    if not records:
+        return
+    try:
+        await sync_to_async(AbsimTrackLog.objects.bulk_create)(records)
+    except Exception:
+        logger.exception("AbsimTrackLog bulk_create 실패 (%d건 유실)", len(records))
+
+
 async def _poll_once(client: httpx.AsyncClient, base_url: str) -> None:
     now = time.time()
     try:
@@ -58,6 +92,11 @@ async def _poll_once(client: httpx.AsyncClient, base_url: str) -> None:
         rest_status.is_connected = True
         rest_status.last_success_time = now
         rest_status.poll_count += 1
+
+        from apps.data_management.session_state import get_active_session_id
+
+        if get_active_session_id() is not None:
+            await _save_track_log(now, rest_status.tracks)
     except Exception as exc:
         # httpx.AsyncClient의 타임아웃류 예외는 str(exc)가 빈 문자열일 수 있음
         # (동기 클라이언트는 'timed out'이 붙지만 비동기 백엔드는 메시지가 없음) —
