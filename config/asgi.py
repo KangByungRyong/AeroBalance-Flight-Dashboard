@@ -9,13 +9,14 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.development")
 
 django.setup()
 
-from apps.udp_receiver.routing import websocket_urlpatterns  # noqa: E402
+from apps.udp_receiver.routing import websocket_urlpatterns as udp_ws_urlpatterns  # noqa: E402
+from apps.replay.routing import websocket_urlpatterns as replay_ws_urlpatterns  # noqa: E402
 
 _inner_application = ProtocolTypeRouter(
     {
         "http": get_asgi_application(),
         "websocket": AuthMiddlewareStack(
-            URLRouter(websocket_urlpatterns)
+            URLRouter(udp_ws_urlpatterns + replay_ws_urlpatterns)
         ),
     }
 )

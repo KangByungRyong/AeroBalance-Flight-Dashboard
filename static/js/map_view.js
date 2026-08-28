@@ -240,3 +240,69 @@ async function pollAbsimTracks() {
 
 pollAbsimTracks();
 setInterval(pollAbsimTracks, ABSIM_POLL_INTERVAL_MS);
+
+// ─── Replay 항적 (Online 데이터와 구분되는 연한 색 + "_Replay" 라벨) ──────
+const REPLAY_TRACK_COLOR = '#ffb3c6';
+const REPLAY_MAX_TRACK_POINTS = 3000;
+
+const replayTracks = new Map(); // session_id → { marker, polyline, points[] }
+
+function makeReplayIcon(heading, label) {
+  const h = heading || 0;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="36" height="36">
+    <g transform="rotate(${h}, 20, 20)">
+      <path d="M20,2 C22,5 23,12 23,22 C23,31 22,36 20,38 C18,36 17,31 17,22 C17,12 18,5 20,2 Z"
+            fill="${REPLAY_TRACK_COLOR}" stroke="#fff" stroke-width="0.8" opacity="0.85"/>
+      <path d="M20,14 L2,24 L3.5,26 L20,19 L36.5,26 L38,24 Z"
+            fill="${REPLAY_TRACK_COLOR}" stroke="#fff" stroke-width="0.8" opacity="0.85"/>
+      <path d="M20,30 L11,36 L12,37.5 L20,33 L28,37.5 L29,36 Z"
+            fill="${REPLAY_TRACK_COLOR}" stroke="#fff" stroke-width="0.8" opacity="0.85"/>
+      <circle cx="20" cy="3.5" r="1.5" fill="#fff" opacity="0.8"/>
+    </g>
+  </svg>`;
+  const html = `<div class="absim-track-marker">
+    ${svg}
+    <div class="absim-track-label replay-track-label">${label}</div>
+  </div>`;
+  return L.divIcon({ html, className: '', iconSize: [1, 1], iconAnchor: [0, 0] });
+}
+
+function upsertReplayTrack(pkt) {
+  if (pkt.lat == null || pkt.lon == null) return;
+  const latlng = [pkt.lat, pkt.lon];
+  const icon = makeReplayIcon(pkt.heading, pkt.label);
+
+  let entry = replayTracks.get(pkt.session_id);
+  if (!entry) {
+    entry = {
+      marker: L.marker(latlng, { icon }).addTo(map),
+      polyline: L.polyline([], { color: REPLAY_TRACK_COLOR, weight: 2, opacity: 0.7, dashArray: '4 4' }).addTo(map),
+      points: [],
+    };
+    replayTracks.set(pkt.session_id, entry);
+  } else {
+    entry.marker.setLatLng(latlng);
+    entry.marker.setIcon(icon);
+  }
+
+  entry.points.push(latlng);
+  if (entry.points.length > REPLAY_MAX_TRACK_POINTS) entry.points.shift();
+  entry.polyline.setLatLngs(entry.points);
+
+  entry.marker.bindPopup(
+    `<b>${pkt.label}</b><br>` +
+    `Alt: ${pkt.alt_ft != null ? Math.round(pkt.alt_ft) : '--'} ft &nbsp; ` +
+    `IAS: ${pkt.ias_kt != null ? Math.round(pkt.ias_kt) : '--'} kt`
+  );
+}
+
+function removeReplayTrack(sessionId) {
+  const entry = replayTracks.get(sessionId);
+  if (!entry) return;
+  map.removeLayer(entry.marker);
+  map.removeLayer(entry.polyline);
+  replayTracks.delete(sessionId);
+}
+
+window.addEventListener('replayData', (e) => upsertReplayTrack(e.detail));
+window.addEventListener('replayEnd', (e) => removeReplayTrack(e.detail.session_id));
