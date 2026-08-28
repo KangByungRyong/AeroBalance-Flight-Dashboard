@@ -1,0 +1,136 @@
+/* 데이터 관리 페이지 전용 스타일 */
+
+.dm-page { color: var(--text-primary); }
+
+/* ─── DB 사용 용량 ────────────────────────────── */
+.dm-usage-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px 18px;
+}
+.dm-usage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+.dm-usage-header .card-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+#dm-usage-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.dm-usage-bar-track {
+  width: 100%;
+  height: 10px;
+  background: var(--bg-tertiary);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.dm-usage-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: #2ecc71;
+  transition: width 0.4s ease, background 0.4s ease;
+}
+.dm-usage-bar-fill.warn { background: #f39c12; }
+.dm-usage-bar-fill.danger { background: var(--accent-active); }
+.dm-usage-tables {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+.dm-usage-tables .dm-usage-table-item strong { color: var(--text-primary); }
+
+.dm-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.dm-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dm-selected-count {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin-right: 4px;
+}
+
+.dm-action-result {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  min-height: 1.2em;
+}
+.dm-action-result.ok { color: #2ecc71; }
+.dm-action-result.fail { color: var(--accent-active); }
+
+.dm-table-wrapper {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.dm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.dm-table th {
+  color: var(--text-muted);
+  font-weight: 400;
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+}
+.dm-table th:first-child, .dm-table td:first-child {
+  width: 36px;
+  padding-left: 14px;
+  padding-right: 4px;
+}
+.dm-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+.dm-session-row { cursor: pointer; }
+.dm-session-row:hover { background: var(--bg-tertiary); }
+.dm-row-check, #dm-select-all { cursor: pointer; }
+
+.dm-empty { text-align: center; color: var(--text-muted); padding: 24px !important; }
+.dm-timeout { color: var(--accent-active); font-weight: 600; }
+.dm-archived { color: var(--text-muted); font-weight: 600; }
+
+.dm-detail-table { width: 100%; font-size: 0.85rem; }
+.dm-detail-table th {
+  color: var(--text-muted);
+  font-weight: 400;
+  text-align: left;
+  padding: 4px 8px;
+  white-space: nowrap;
+  vertical-align: top;
+}
+.dm-detail-table td { padding: 4px 8px; color: var(--text-primary); }
+
+/* Bootstrap 모달 다크 테마 오버라이드 */
+.modal-content {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+.modal-header { border-bottom-color: var(--border-color); }

@@ -3,28 +3,95 @@
 
 {% block title %}데이터 관리 — Flight Monitor{% endblock %}
 
-{% comment %}
-─── 추후 구성 예정 ────────────────────────────────────────
 {% block extra_css %}
-  <style>
-    #management-layout { ... }
-    ... (생략)
-  </style>
+<link rel="stylesheet" href="{% static 'css/data_management.css' %}">
 {% endblock %}
-{% endcomment %}
 
 {% block content %}
-<div style="display:flex; align-items:center; justify-content:center; height:100%; color:var(--text-muted);">
-  <div style="text-align:center;">
-    <div style="font-size:3rem; opacity:0.3;">📋</div>
-    <p style="margin-top:12px;">데이터 관리 — 추후 구성 예정</p>
+{% csrf_token %}
+<div class="dm-page p-4">
+
+  <!-- DB 사용 용량 -->
+  <div class="dm-usage-card mb-3">
+    <div class="dm-usage-header">
+      <span class="card-label">DB 사용 용량</span>
+      <span id="dm-usage-text">조회 중...</span>
+    </div>
+    <div class="dm-usage-bar-track">
+      <div id="dm-usage-bar-fill" class="dm-usage-bar-fill" style="width:0%"></div>
+    </div>
+    <div id="dm-usage-tables" class="dm-usage-tables"></div>
+  </div>
+
+  <div class="page-header mb-3 dm-header-row">
+    <div>
+      <h4 class="mb-0">데이터 관리 — 저장된 비행 세션</h4>
+      <span class="text-muted small">조회 전용 — 세션 시작은 Flight Planning 페이지에서 수행</span>
+    </div>
+    <div class="dm-toolbar">
+      <span id="dm-selected-count" class="dm-selected-count">0개 선택</span>
+      <button id="dm-export-btn" class="btn btn-sm btn-outline-info" type="button" disabled>내보내기</button>
+      <button id="dm-import-btn" class="btn btn-sm btn-outline-warning" type="button">가져오기</button>
+      <input type="file" id="dm-import-file-input" accept=".gz" multiple style="display:none;">
+    </div>
+  </div>
+
+  <div id="dm-action-result" class="dm-action-result mb-2"></div>
+
+  <div class="dm-table-wrapper">
+    <table class="dm-table">
+      <thead>
+        <tr>
+          <th><input type="checkbox" id="dm-select-all"></th>
+          <th>Callsign</th>
+          <th>조종사</th>
+          <th>FPL / Free Flight</th>
+          <th>Dep → Arr</th>
+          <th>시작 시각</th>
+          <th>종료 시각</th>
+          <th>종료 사유</th>
+          <th>저장 상태</th>
+        </tr>
+      </thead>
+      <tbody id="dm-session-tbody">
+        {% for s in sessions %}
+        <tr class="dm-session-row" data-id="{{ s.id }}">
+          <td><input type="checkbox" class="dm-row-check" data-id="{{ s.id }}"></td>
+          <td>{{ s.callsign }}</td>
+          <td>{{ s.pilot.name }}</td>
+          <td>{% if s.flight_plan %}{{ s.flight_plan.name }}{% elif s.flight_plan_snapshot %}{{ s.flight_plan_snapshot.name }} (삭제됨){% else %}Free Flight{% endif %}</td>
+          <td>{{ s.flight_plan_snapshot.dep|default:"—" }} → {{ s.flight_plan_snapshot.arr|default:"—" }}</td>
+          <td>{{ s.start_time|date:"Y-m-d H:i:s" }}</td>
+          <td>{{ s.end_time|date:"Y-m-d H:i:s"|default:"진행 중" }}</td>
+          <td>{% if s.end_reason == "timeout" %}<span class="dm-timeout">타임아웃</span>{% elif s.end_reason == "manual" %}수동{% else %}—{% endif %}</td>
+          <td class="dm-status-cell">{% if s.archived_at %}<span class="dm-archived">내보냄</span>{% else %}보관 중{% endif %}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" class="dm-empty">저장된 비행 세션이 없습니다.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 세션 상세 모달 (조회 전용) -->
+<div class="modal fade" id="dm-detail-modal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">세션 상세</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <table class="dm-detail-table">
+          <tbody id="dm-detail-body"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}
 
-{% comment %}
-─── 추후 구성 예정 ────────────────────────────────────────
 {% block extra_js %}
-  <script src="{% static 'js/data_management.js' %}"></script>
+<script src="{% static 'js/data_management.js' %}"></script>
 {% endblock %}
-{% endcomment %}

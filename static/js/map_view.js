@@ -26,19 +26,20 @@ const trackPolyline = L.polyline([], {
 }).addTo(map);
 
 // ─── 항공기 마커 (탑뷰 실루엣) ───────────────────────────────
-function makeAircraftIcon(heading) {
+function makeAircraftIcon(heading, color) {
   const h = heading || 0;
+  const c = color || '#e94560';
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40">
     <g transform="rotate(${h}, 20, 20)">
       <!-- 동체 -->
       <path d="M20,2 C22,5 23,12 23,22 C23,31 22,36 20,38 C18,36 17,31 17,22 C17,12 18,5 20,2 Z"
-            fill="#e94560" stroke="#fff" stroke-width="0.8"/>
+            fill="${c}" stroke="#fff" stroke-width="0.8"/>
       <!-- 주익 -->
       <path d="M20,14 L2,24 L3.5,26 L20,19 L36.5,26 L38,24 Z"
-            fill="#e94560" stroke="#fff" stroke-width="0.8"/>
+            fill="${c}" stroke="#fff" stroke-width="0.8"/>
       <!-- 미익 -->
       <path d="M20,30 L11,36 L12,37.5 L20,33 L28,37.5 L29,36 Z"
-            fill="#e94560" stroke="#fff" stroke-width="0.8"/>
+            fill="${c}" stroke="#fff" stroke-width="0.8"/>
       <!-- 기수 표시 (흰점) -->
       <circle cx="20" cy="3.5" r="1.5" fill="#fff" opacity="0.9"/>
     </g>
@@ -158,3 +159,84 @@ map.on('dragstart', () => {
 });
 
 // sidebar.js의 window._leafletMap 참조로 invalidateSize() 처리됨
+
+// ─── ABSim-Dashboard REST 항적 (X-Plane과 별개 출처) ──────────
+const ABSIM_TRACKS_URL = '/absim/api/tracks/';
+const ABSIM_POLL_INTERVAL_MS = 1500;
+const ABSIM_TRACK_COLOR = '#4ea8de';
+const ABSIM_TRACK_COLOR_STALE = '#555b6e';
+
+const absimMarkers = new Map(); // model → L.Marker
+
+// ABSim-Dashboard 항적 마커: 기체 실루엣(heading 회전) + 항상 보이는 Callsign 라벨
+function makeAbsimTrackIcon(heading, color, label) {
+  const h = heading || 0;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="32" height="32">
+    <g transform="rotate(${h}, 20, 20)">
+      <path d="M20,2 C22,5 23,12 23,22 C23,31 22,36 20,38 C18,36 17,31 17,22 C17,12 18,5 20,2 Z"
+            fill="${color}" stroke="#fff" stroke-width="0.8"/>
+      <path d="M20,14 L2,24 L3.5,26 L20,19 L36.5,26 L38,24 Z"
+            fill="${color}" stroke="#fff" stroke-width="0.8"/>
+      <path d="M20,30 L11,36 L12,37.5 L20,33 L28,37.5 L29,36 Z"
+            fill="${color}" stroke="#fff" stroke-width="0.8"/>
+      <circle cx="20" cy="3.5" r="1.5" fill="#fff" opacity="0.9"/>
+    </g>
+  </svg>`;
+  const html = `<div class="absim-track-marker">
+    ${svg}
+    <div class="absim-track-label">${label}</div>
+  </div>`;
+  return L.divIcon({ html, className: '', iconSize: [1, 1], iconAnchor: [0, 0] });
+}
+
+function upsertAbsimTrack(track) {
+  const latlng = [track.lat, track.lon];
+  const stale = track.udp_connected === false;
+  const label = track.callsign || track.model;
+  const icon = makeAbsimTrackIcon(track.hdg, stale ? ABSIM_TRACK_COLOR_STALE : ABSIM_TRACK_COLOR, label);
+
+  let marker = absimMarkers.get(track.model);
+  if (!marker) {
+    marker = L.marker(latlng, { icon }).addTo(map);
+    absimMarkers.set(track.model, marker);
+  } else {
+    marker.setLatLng(latlng);
+    marker.setIcon(icon);
+  }
+
+  marker.bindPopup(
+    `<b>${label}</b> (${track.model})<br>` +
+    `Alt: ${track.alt != null ? Math.round(track.alt) : '--'} ft &nbsp; ` +
+    `Spd: ${track.spd != null ? Math.round(track.spd) : '--'} kt<br>` +
+    (stale ? '⚠️ UDP 끊김' : '✅ UDP 연결됨')
+  );
+}
+
+function pruneAbsimTracks(seenModels) {
+  for (const [model, marker] of absimMarkers) {
+    if (!seenModels.has(model)) {
+      map.removeLayer(marker);
+      absimMarkers.delete(model);
+    }
+  }
+}
+
+async function pollAbsimTracks() {
+  try {
+    const resp = await fetch(ABSIM_TRACKS_URL);
+    if (!resp.ok) return;
+    const data = await resp.json();
+    const seen = new Set();
+    for (const track of (data.tracks || [])) {
+      if (track.lat == null || track.lon == null) continue;
+      upsertAbsimTrack(track);
+      seen.add(track.model);
+    }
+    pruneAbsimTracks(seen);
+  } catch {
+    // 네트워크 오류 시 마지막으로 표시된 상태 유지
+  }
+}
+
+pollAbsimTracks();
+setInterval(pollAbsimTracks, ABSIM_POLL_INTERVAL_MS);

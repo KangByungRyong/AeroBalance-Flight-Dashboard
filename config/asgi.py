@@ -38,18 +38,30 @@ class _LifespanApplication:
             return
 
         from apps.udp_receiver.udp_listener import start_udp_listener, stop_udp_listener
+        from apps.absim_link.rest_client import start_poller, stop_poller
+        from apps.data_management.session_watchdog import start_watchdog, stop_watchdog
+        from apps.data_management.retention_scheduler import (
+            start_retention_scheduler,
+            stop_retention_scheduler,
+        )
 
         while True:
             message = await receive()
             if message["type"] == "lifespan.startup":
                 try:
                     await start_udp_listener()
+                    await start_poller()
+                    await start_watchdog()
+                    await start_retention_scheduler()
                 except Exception as exc:
                     await send({"type": "lifespan.startup.failed", "message": str(exc)})
                     return
                 await send({"type": "lifespan.startup.complete"})
             elif message["type"] == "lifespan.shutdown":
                 stop_udp_listener()
+                stop_poller()
+                stop_watchdog()
+                stop_retention_scheduler()
                 await send({"type": "lifespan.shutdown.complete"})
                 return
 
