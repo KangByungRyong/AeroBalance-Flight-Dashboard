@@ -119,7 +119,8 @@ xplane_monitor/          ← Django 프로젝트 루트
 │   ├── data_management/   ← 구현 완료: 저장된 세션 조회·관리 전용 (Pilot/
 │   │                          FlightSession/FlightData/FlightEvent/
 │   │                          AbsimTrackLog 소유, §5·§10)
-│   └── replay/             ← Page: 저장 데이터 Replay (보류 — 추후 구성)
+│   └── replay/             ← 구현 완료: Replay (세션 선택 + 재생/정지 컨트롤
+│                              전용 — 자체 지도/차트 없음, §12, 2026-08-28 신규)
 ├── static/
 │   ├── js/
 │   │   ├── uplot.min.js
@@ -181,12 +182,14 @@ xplane_monitor/          ← Django 프로젝트 루트
 🛫  Flight Plan Injection   ← /flight-plan-injection/ (신규)
 🧑‍✈️  Pilot Flight           ← /pilot-flight/ (신규, 2026-07-19 — §11)
 📋  데이터 관리             ← /management/ (구현 완료 2026-07-19, §5·§10)
-▶️  Replay                  ← /replay/ (보류)
+▶️  Replay                  ← /replay/ (구현 완료 2026-08-28 — §12)
 ━━━━━━━━━━━━━━━━━━━
 ⚙️  설정                   ← /settings/
 
-> Replay는 보류 상태(미착수) — 사이드바 링크는 이미 존재하나 페이지는 스텁.
-> 데이터 관리는 §5·§10 기준 구현 완료.
+> 데이터 관리는 §5·§10 기준 구현 완료. Replay는 §12 기준 구현 완료 — 자체
+> 지도/차트 없이 세션 선택 + 재생/정지 컨트롤 화면이며, 실제 시각화는 Air
+> Traffic Tracking(`/map/`)·Data Chart(`/chart/`) 페이지에서 Online 데이터와
+> 함께 이루어진다.
 
 ### 페이지별 URL 구조
 | **페이지** | **URL** | **앱** |
@@ -197,7 +200,7 @@ xplane_monitor/          ← Django 프로젝트 루트
 | Flight Plan Injection | `/flight-plan-injection/` | `flight_plan_injection` |
 | Pilot Flight | `/pilot-flight/` | `pilot_flight` |
 | 데이터 관리 | `/management/` | `data_management` |
-| Replay (보류) | `/replay/` | `replay` |
+| Replay | `/replay/` | `replay` |
 | 설정 | `/settings/` | `config` |
 | 루트 리다이렉트 | `/` → `/map/` | — |
 
@@ -253,7 +256,12 @@ xplane_monitor/          ← Django 프로젝트 루트
           <span class="label">데이터 관리</span>
         </a>
       </li>
-      <!-- Replay: 보류 — 구현 시 복귀 -->
+      <li class="{% raw %}{% if active_page == 'replay' %}active{% endif %}{% endraw %}">
+        <a href="{% raw %}{% url 'replay:index' %}{% endraw %}">
+          <span class="icon">▶️</span>
+          <span class="label">Replay</span>
+        </a>
+      </li>
     </ul>
     <ul class="sidebar-menu sidebar-bottom">
       <li class="{% raw %}{% if active_page == 'udp_status' %}active{% endif %}{% endraw %}">
@@ -366,7 +374,10 @@ Callsign + Flight Plan 선택 또는 Free Flight + ".fms 생성/다운로드"/"�
 데이터 관리(§5·§10, 구현 완료): 저장된 세션 목록 테이블(Callsign/Pilot/FPL명 또는
 Free Flight/dep·arr/시작·종료 시각/종료 사유) — 조회 전용, 행 클릭 시 모달로 상세
 (저장 건수 포함) 조회. 세션 시작 액션 없음(Pilot Flight에서 수행)
-Replay: 보류 — 추후 별도 작업
+Replay(§12, 구현 완료): 콘텐츠 영역 = 세션 선택 테이블(체크박스, 최대
+`REPLAY_MAX_SESSIONS`개) + 재생 시작/정지 버튼 + 재생 중 진행률 패널. 자체
+지도/차트 없음 — 재생 데이터는 서버가 `ws/replay/`로 브로드캐스트해 Air
+Traffic Tracking/Data Chart 페이지에 표시됨
 
 ## 활성 메뉴 표시 방법
 각 View의 get_context_data() 또는 CBV extra_context에 active_page 값을 전달하여 사이드바 활성 항목 강조
@@ -435,12 +446,12 @@ class MapIndexView(TemplateView):
 - 특이사항(`FlightEvent`) 조회·기록 UI는 미착수 — 카테고리 분류 체계가 아직
   미확정이라(하단 미확정 항목 참고) 이번 라운드 스코프에서 제외
 - 상세 스키마·워크플로우는 §10, `### DB 설계 원칙` 참고
-### 6. Replay (replay — 보류)
-DB에서 세션 데이터 조회 → 시간 순서대로 재생 (추후 구성, 현재 미착수)
-재생 속도: 0.5x / 1x / 2x / 4x 배속 지원
-동시 재현: 지도(Leaflet) + Strip Chart(uPlot) 동기화 재생
-구간 선택: 전체 재생 / 시간 범위 선택 재생
-재생 컨트롤: 재생/일시정지/정지/구간이동
+### 6. Replay (replay — 구현 완료 2026-08-28, §12 참고)
+- 상세 아키텍처·설계 결정은 §12(핵심 모듈별 구현 지침 하단) 참고. 요약:
+  서버가 저장된 `FlightData`를 실제 기록 페이스로 재생하며 `ws/replay/`로
+  브로드캐스트 — Air Traffic Tracking(연한 색 + `_Replay` 라벨)·Data
+  Chart(연한 점선)에 Online 데이터와 함께 표시된다. 배속 조절 없음(1x
+  고정), Replay 페이지 자체에는 지도/차트가 없다.
 
 ### 7. ABSim-Dashboard REST 연동 (absim_link — 구현 완료 2026-07-18)
 - 대상: `GET /api/abfap/tracks/`, `GET /api/abfap/model-status/`
@@ -742,6 +753,92 @@ FPL 라이브러리 CRUD(저장/삭제/이름 관리)와 "지금 이 조종사�
   **실제 브라우저에서의 지도 드래그/Edit Box 동기화/파일 다운로드 UX는
   미검증**(로컬 서버 curl 테스트로는 확인 불가한 영역)
 
+### 12. Replay (replay — 신규 앱, 구현 완료 2026-08-28)
+
+**배경:** 기존 Replay 페이지는 자체 미니 지도+차트를 가진 스텁이었으나(재생/
+일시정지/정지/배속(0.5~4x)/구간 이동 UI만 있고 실제 재생 로직 없음), 사용자
+요청으로 전면 재설계 — 최대 5개 저장 세션을 선택해 **이륙 시점 기준으로
+자동 정렬**해 재생하고, 그 결과를 Replay 페이지 자체가 아니라 기존 Air
+Traffic Tracking(`/map/`)·Data Chart(`/chart/`) 페이지에 Online 데이터와
+함께 표시한다. 배속 조절 기능은 요구사항에서 제외(1x 고정).
+
+**설계 결정 (사용자 확인 완료, 2026-08-28):**
+1. **전달 방식 — 서버 브로드캐스트.** `udp_listener.py`/`rest_client.py`와
+   같은 패턴으로 서버가 백그라운드 asyncio 태스크(`replay_player.py`)에서
+   DB의 `FlightData`를 실제 기록된 페이스 그대로 재생하며 신규 Channels
+   그룹(`replay_data`, `ws/replay/`)에 브로드캐스트한다. Replay 페이지를
+   벗어나 Map/Chart로 이동해도 재생이 서버에서 계속되고 그대로 표시됨 —
+   클라이언트 로컬 재생(탭 종속)은 채택하지 않음.
+2. **시간축 — 현재 시각 기준 리매핑.** 재생 시작 시각을 각 세션의 자동
+   감지된 이륙 시점에 맞추고, 이후 각 행은 `현재 시각 + (원본 timestamp −
+   이륙 시각)`으로 타임스탬프를 다시 씌워 전송한다. Map/Chart의 기존
+   실시간 슬라이딩 윈도우(60초, `WINDOW_SEC`)를 그대로 재사용할 수 있어
+   Online 데이터·여러 Replay 세션이 자연스럽게 같은 화면에 겹쳐 보인다 —
+   원본 타임스탬프를 그대로 쓰는 방식은 채택하지 않음(Chart가 별도
+   "경과시간" 모드로 전환돼야 해 Online과 안 섞임).
+3. **재생 범위 — 자기 항적(`FlightData`)만.** 선택한 세션의 X-Plane UDP
+   저장분만 재생한다. `AbsimTrackLog`(주변 ABSim 트래픽)는 세션과 FK 없이
+   시간 기반으로만 느슨하게 연관돼 있어 재생 대상에서 제외.
+
+**이륙 시점 자동 감지 (`replay_player.py: _detect_takeoff_ts_sync()`):**
+1순위 — `params.position.gear_height_ftagl`(Alt AGL from Gear)가
+`REPLAY_TAKEOFF_AGL_THRESHOLD_FT`(기본 50ft)를 넘는 첫 시각(MariaDB
+`JSON_EXTRACT` 조회). 2순위(AGL 데이터가 없는 세션 대비 폴백) — 지상속도
+`gs_kt`가 `REPLAY_TAKEOFF_GS_THRESHOLD_KT`(기본 40kt)를 넘는 첫 시각. 둘 다
+없으면 세션 시작 시각으로 대체(정렬 없이 재생만 됨).
+
+**재생 엔진 동작:**
+- 세션당 독립된 asyncio 태스크 — 최대 `REPLAY_MAX_SESSIONS`개(기본 5) 동시
+  재생. 재생 중 새로 "재생 시작"을 누르면 기존 재생을 먼저 정지하고 새
+  선택으로 다시 시작(단일 재생 상태만 유지, 여러 재생 배치를 큐잉하지
+  않음)
+- `FlightData`를 이륙 시점부터 타임스탬프 오름차순으로 청크 단위(2000행)
+  조회해 각 행의 원본 시간 간격만큼 실제로 대기(`asyncio.sleep`)한 뒤
+  전송 — 원본 기록 페이스 그대로 재생됨. 단, 원본에 큰 시간 공백(UDP 순간
+  유실 등)이 있어도 그 시간만큼 그대로 멈춰있지 않도록 연속 두 행 사이
+  대기 시간 상한을 `REPLAY_MAX_GAP_SEC`(기본 3초)로 둠
+- 완료 또는 정지 시 세션별로 `{"type":"end", "session_id":...}` 메시지를
+  브로드캐스트 — Map/Chart가 이를 받아 해당 세션의 마커/시리즈를 제거
+- 재생 가능한 세션 목록(`GET /replay/api/sessions/`)은 종료됐고(`end_time`
+  not null) 아카이브되지 않은(`archived_at` null) 세션만 — 진행 중인
+  세션은 이미 실시간으로 보이고, 아카이브된 세션은 `FlightData`가 DB에서
+  삭제돼 재생 불가
+
+**Map/Chart 표시 (Online 데이터와 구분):**
+- 공통: 라벨은 `{callsign}_Replay` 형태(`replay_player.py`가 세션마다
+  1회 계산해 매 프레임에 실어 보냄)
+- Air Traffic Tracking(`static/js/map_view.js`): 연한 핑크(`#ffb3c6`)
+  기체 아이콘 + 상시 라벨(ABSim 트랙과 동일한 아이콘+라벨 마커 패턴) +
+  연한 점선 항적선. `window.replayData`/`replayEnd` 커스텀 이벤트로 갱신
+- Data Chart(`static/js/strip_chart.js`): 각 차트의 메인 채널에 한해
+  Replay 세션별 시리즈를 추가 — 채널 기본 색을 밝게(`lightenColor()`,
+  55%) + 점선(`dotted`)으로 렌더링. **extraSeries(사용자가 스타일 패널로
+  추가한 보조 채널)에는 적용하지 않음** — 범위를 벌리면 차트당 시리즈
+  수가 과도하게 늘어나 우선 메인 채널만 지원(필요 시 확장 가능)
+  - uPlot은 차트 하나에 시리즈 전체가 하나의 공유 x축(시간 배열)을 써야
+    하는데, Replay 시리즈는 Online과 다른 독립적인 타임스탬프를 가지므로
+    `buildMergedData()`가 5ms 버킷 단위로 여러 시리즈의 타임스탬프를 정렬
+    병합해 uPlot에 넘긴다
+  - `/chart/external/` 외부창은 `base.html`을 확장하지 않아(자체
+    WebSocket 없음) 기존 `flightData` 중계와 동일하게 `BroadcastChannel`
+    (`replay-data-bc`)로 메인창 → 외부창 전달
+
+**전역 WebSocket 클라이언트:** `static/js/replay_ws_client.js` —
+`ws_client.js`와 동일한 지수 백오프 재연결 패턴으로 `ws/replay/`에 상시
+연결(`base.html`에 전역 로드), `replayData`/`replayEnd` 커스텀 이벤트로
+발행
+
+**Replay 페이지(`templates/replay/index.html`, `static/js/replay.js`):**
+세션 선택 테이블(체크박스, 최대 `REPLAY_MAX_SESSIONS`개 — 초과 선택 시
+나머지 체크박스 비활성화) + "재생 시작"/"정지" 버튼 + 재생 중 세션별
+진행률 바(`GET /replay/status/` 1초 폴링). 자체 지도/차트는 없음.
+
+- end-to-end 확인 완료(로컬 curl + `websockets` 클라이언트로 `ws/replay/`
+  프레임 수신 확인 — 재생 시작 → 실시간 페이스로 프레임 전송(약 25~30ms
+  간격) → 정지까지 확인). **실제 브라우저에서의 Map/Chart 렌더링(연한
+  색/점선, `_Replay` 라벨, 여러 세션 동시 재생)은 미검증**(로컬 서버 curl/
+  스크립트 테스트로는 확인 불가한 영역)
+
 ### DB 설계 원칙
 저장 주기
 비행 데이터: 50Hz 전체 저장 (초당 50행)
@@ -834,6 +931,10 @@ python manage.py runserver
  네이티브 플러그인/중계 에이전트를 둘지는 별도 트랙에서 검토)
  `apps/flight_planning/fms.py`의 `.fms`(v11) 포맷이 실제 X-Plane 12에서 LOAD되는지
  검증 (§10 — 커뮤니티 문서 기준으로 작성, 실기 테스트 안 됨)
+ Replay 이륙 시점 자동 감지 임계값 실측 튜닝 필요 (§12 — 기본 AGL 50ft / 지상속도
+ 40kt로 구현·적용됨, `.env`에서 조정 가능, 실제 저장된 비행 데이터로 검증 필요)
+ Replay를 Data Chart의 extraSeries(보조 채널)에도 표시할지 (§12 — 현재는 각 차트의
+ 메인 채널에만 적용, 필요 시 확장 가능)
 
 참고 자료
 Django 5.2 LTS 공식 문서
@@ -890,10 +991,10 @@ X-Plane UDP 데이터 포맷
    검증 완료. **실제 ABSim-Dashboard 서버와의 연동은 미검증** — 이 저장소 안에서
    재현 가능한 범위까지만 확인)
 
-**보류 (미착수):**
+**완료 (별도 항목):**
 - [x] 데이터 관리 (조종사/세션 관리) — 아래 별도 항목으로 구현 완료. 특이사항
       (`FlightEvent`) 조회·기록 UI만 카테고리 체계 미확정으로 계속 보류
-- [ ] Replay
+- [x] Replay — §12, 2026-08-28 구현 완료(아래 "Replay 페이지 재구성" 항목 참고)
 
 ---
 
@@ -945,6 +1046,43 @@ X-Plane UDP 데이터 포맷
 - [ ] 계획 대비 실비행 비교·분석 기능 — 이번 스코프 아님, 스키마만 지원
 - [ ] 특이사항(`FlightEvent`) 조회·기록 UI — 카테고리 체계 미확정
 - [ ] X-Plane FMS 자동 반영(플러그인/중계 에이전트) — 현재는 `.fms` 수동 배치로 대체
+
+---
+
+### Replay 페이지 재구성 (2026-08-28 설계 확정 → 구현 완료)
+
+**배경:** 기존 Replay 페이지는 자체 미니 지도+차트를 가진 스텁(배속 조절
+UI만 있고 재생 로직 없음)이었음 — 사용자 요청으로 "최대 5개 세션을 선택해
+이륙 시점 기준 자동 정렬 재생, 결과는 Air Traffic Tracking/Data Chart
+페이지에 표시"로 전면 재설계.
+
+**결정 필요 사항 3가지를 사용자에게 확인 후 진행(모두 권장안 채택):**
+1. 전달 방식 — 서버 브로드캐스트(`ws/replay/`, 페이지 이동해도 재생 유지)
+2. 시간축 — 현재 시각 기준 리매핑(이륙 시점을 재생 시작 시각에 맞춤,
+   Map/Chart의 기존 슬라이딩 윈도우 재사용)
+3. 재생 범위 — 자기 항적(`FlightData`)만(주변 `AbsimTrackLog`는 제외)
+
+상세 아키텍처·구현 내용은 `## 핵심 모듈별 구현 지침 → 12. Replay` 참고.
+
+**완료 (2026-08-28):**
+- [x] `apps/replay/replay_player.py` — 세션별 독립 asyncio 태스크로 재생,
+      이륙 시점 자동 감지(AGL/지상속도 임계값), Channels 그룹 브로드캐스트
+- [x] `ws/replay/`(`ReplayDataConsumer`) + `static/js/replay_ws_client.js`
+      (전역 로드, `ws_client.js`와 동일한 재연결 패턴)
+- [x] Replay 페이지 재구성 — 세션 선택 테이블(체크박스 최대 5개) + 재생/
+      정지 + 진행률 폴링, 자체 지도/차트 제거
+- [x] Air Traffic Tracking — 연한 색(`#ffb3c6`) + `_Replay` 라벨 + 점선
+      항적선으로 Replay 마커 표시(`map_view.js`)
+- [x] Data Chart — 각 차트 메인 채널에 한해 연한 점선 Replay 시리즈 표시,
+      독립 타임스탬프를 가진 여러 시리즈를 5ms 버킷으로 병합하는
+      `buildMergedData()` 도입, 외부창(`/chart/external/`)은
+      `BroadcastChannel`로 중계(`strip_chart.js`)
+- [x] `REPLAY_MAX_SESSIONS`/`REPLAY_TAKEOFF_AGL_THRESHOLD_FT`/
+      `REPLAY_TAKEOFF_GS_THRESHOLD_KT`/`REPLAY_MAX_GAP_SEC` `.env` 설정화
+- end-to-end 확인 완료: 로컬 curl(세션 목록/재생 시작/상태 폴링/정지) +
+  `websockets` 클라이언트로 `ws/replay/` 프레임 수신(실시간 페이스로
+  `{callsign}_Replay` 라벨의 프레임 전송 확인). **실제 브라우저에서의
+  Map/Chart 시각화(색상·점선·라벨, 다중 세션 동시 재생)는 미검증**
 
 ---
 

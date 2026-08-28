@@ -1,0 +1,91 @@
+#vkbd-root {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2000;
+  display: none;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.12s ease-out, transform 0.12s ease-out;
+}
+
+#vkbd-root.vkbd-open {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#vkbd-panel {
+  width: max-content;
+  max-width: min(420px, calc(100vw - 12px));
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px 12px 12px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+.vkbd-row {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.vkbd-key {
+  min-width: 34px;
+  height: 40px;
+  padding: 0 10px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.vkbd-key:active {
+  background: var(--accent-blue);
+}
+
+.vkbd-key-active {
+  background: var(--accent-blue);
+  border-color: var(--accent-active);
+}
+
+.vkbd-key-wide {
+  flex: 1;
+  max-width: 260px;
+}
+
+.vkbd-numeric .vkbd-key {
+  min-width: 64px;
+  flex: 1;
+  max-width: 100px;
+}
+
+#vkbd-actionrow {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 8px;
+}
+
+#vkbd-actionrow button {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+#vkbd-actionrow button[data-action="close"] {
+  background: var(--accent-active);
+  border-color: var(--accent-active);
+  color: #fff;
+}

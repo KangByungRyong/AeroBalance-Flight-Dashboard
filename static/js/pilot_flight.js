@@ -303,6 +303,7 @@ const newPilotForm = document.getElementById('pf-new-pilot-form');
 const newPilotName = document.getElementById('pf-new-pilot-name');
 const newPilotOrg = document.getElementById('pf-new-pilot-org');
 const newPilotLicense = document.getElementById('pf-new-pilot-license');
+const newPilotNotes = document.getElementById('pf-new-pilot-notes');
 const newPilotSave = document.getElementById('pf-new-pilot-save');
 const callsignInput = document.getElementById('pf-callsign');
 
@@ -336,6 +337,7 @@ newPilotSave.addEventListener('click', async () => {
       name,
       organization: newPilotOrg.value.trim(),
       license_no: newPilotLicense.value.trim(),
+      notes: newPilotNotes.value.trim(),
     }),
   });
   const data = await resp.json();
@@ -345,6 +347,7 @@ newPilotSave.addEventListener('click', async () => {
   newPilotName.value = '';
   newPilotOrg.value = '';
   newPilotLicense.value = '';
+  newPilotNotes.value = '';
 });
 
 // ─── .fms 생성/다운로드 (Edit Box에 반영된 현재 좌표 그대로) ───

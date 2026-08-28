@@ -5,7 +5,8 @@ X-Plane 12 DATA 출력 패킷 그룹 정의 (XPlane_PackInfo_R1.ini 기준).
   - group_index : 4바이트 (int32 LE, 패딩 없음)
   - values      : 8 x float32 LE (32바이트)
 
-fields 배열 인덱스 = 값 순서 (None = Dummy 필드, 파싱 시 무시)
+fields 배열 인덱스 = 값 순서 (None = Dummy 필드 — 이름 매핑은 없지만 원본 값은
+`_dummy_{index}` 키로 보존됨, `udp_listener.py: _parse()` 참고)
 키는 X-Plane 실제 그룹 ID (순차 번호 아님).
 """
 from typing import TypedDict

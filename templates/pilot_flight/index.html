@@ -21,7 +21,7 @@
     <button id="pf-new-pilot-btn" class="btn btn-sm btn-outline-light" type="button">+ 신규</button>
 
     <label>Callsign</label>
-    <input type="text" id="pf-callsign" class="form-control form-control-sm" placeholder="예: ABX01">
+    <input type="text" id="pf-callsign" class="form-control form-control-sm" placeholder="예: ABX01" data-vkbd="alphanumeric">
 
     <label>Flight Plan</label>
     <select id="pf-plan-select" class="form-select form-select-sm">
@@ -41,9 +41,22 @@
   </div>
 
   <div id="pf-new-pilot-form" class="pf-inline-form" style="display:none;">
-    <input type="text" id="pf-new-pilot-name" class="form-control form-control-sm" placeholder="이름">
-    <input type="text" id="pf-new-pilot-org" class="form-control form-control-sm" placeholder="소속">
-    <input type="text" id="pf-new-pilot-license" class="form-control form-control-sm" placeholder="자격번호">
+    <div class="pf-new-pilot-field">
+      <label for="pf-new-pilot-name">이름 <span class="pf-required">*</span></label>
+      <input type="text" id="pf-new-pilot-name" class="form-control form-control-sm" placeholder="예: Hong Gildong" data-vkbd="alphanumeric">
+    </div>
+    <div class="pf-new-pilot-field">
+      <label for="pf-new-pilot-org">소속</label>
+      <input type="text" id="pf-new-pilot-org" class="form-control form-control-sm" placeholder="예: AeroBalance" data-vkbd="alphanumeric">
+    </div>
+    <div class="pf-new-pilot-field">
+      <label for="pf-new-pilot-license">자격번호</label>
+      <input type="text" id="pf-new-pilot-license" class="form-control form-control-sm" placeholder="예: ATPL-12345" data-vkbd="alphanumeric">
+    </div>
+    <div class="pf-new-pilot-field pf-new-pilot-field-notes">
+      <label for="pf-new-pilot-notes">메모</label>
+      <input type="text" id="pf-new-pilot-notes" class="form-control form-control-sm" placeholder="선택 입력" data-vkbd="alphanumeric">
+    </div>
     <button id="pf-new-pilot-save" class="btn btn-sm btn-primary" type="button">등록</button>
   </div>
 

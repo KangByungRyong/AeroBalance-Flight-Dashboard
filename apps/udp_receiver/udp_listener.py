@@ -125,9 +125,19 @@ def _parse(data: bytes) -> dict:
                 # X-Plane "not applicable" 센티널 값 필터 (-999 계열)
                 if val > -998.0:
                     parsed[fname] = val
+            else:
+                # Dummy 필드도 미등록 그룹(_unknown_*)과 동일하게 원본 값을
+                # 보존한다 — 이름 매핑이 없다는 이유로 조용히 버리지 않는다
+                # (CLAUDE.md §1 "UDP 정보 전체 저장" 원칙, 2026-08-28 반영).
+                # 의미를 모르는 슬롯이므로 센티널 필터는 적용하지 않는다.
+                parsed[f"_dummy_{i}"] = float(values[i])
 
         groups[group_name] = parsed
         udp_status.received_groups[group_idx] = time.time()
+
+    remaining = len(data) - offset
+    if remaining > 0:
+        logger.warning("패킷 끝 잘린 레코드 무시: %d바이트 남음", remaining)
 
     if not groups:
         return {}

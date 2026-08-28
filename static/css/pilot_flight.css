@@ -29,12 +29,27 @@
 
 .pf-inline-form {
   display: flex;
+  align-items: flex-end;
   gap: 8px;
   padding: 8px 16px;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
 }
 .pf-inline-form input { width: auto; min-width: 140px; }
+
+.pf-new-pilot-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pf-new-pilot-field label {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+.pf-new-pilot-field-notes { flex: 1; }
+.pf-new-pilot-field-notes input { width: 100%; min-width: 200px; }
+.pf-required { color: var(--accent-active); }
 
 .pf-active-banner {
   background: var(--accent-blue);

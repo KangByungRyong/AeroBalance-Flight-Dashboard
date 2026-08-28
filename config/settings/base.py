@@ -128,3 +128,13 @@ SESSION_ARCHIVE_DIR: Path = BASE_DIR / "data" / "session_archives"
 
 # 데이터 관리 — DB 용량 모니터링 (CLAUDE.md §10)
 DB_CAPACITY_LIMIT_GB: float = env.float("DB_CAPACITY_LIMIT_GB", default=500.0)
+
+# Replay — 저장된 세션 재생 (CLAUDE.md 신규, 2026-08-28)
+REPLAY_MAX_SESSIONS: int = env.int("REPLAY_MAX_SESSIONS", default=5)
+# 이륙 시점 자동 감지 임계값 — 1순위 Alt AGL(Gear), 2순위 지상속도(AGL 데이터가
+# 없는 세션 대비 폴백). 둘 다 없으면 세션 시작 시각으로 대체한다.
+REPLAY_TAKEOFF_AGL_THRESHOLD_FT: float = env.float("REPLAY_TAKEOFF_AGL_THRESHOLD_FT", default=50.0)
+REPLAY_TAKEOFF_GS_THRESHOLD_KT: float = env.float("REPLAY_TAKEOFF_GS_THRESHOLD_KT", default=40.0)
+# 원본 기록에 큰 시간 공백(예: 일시적 UDP 유실)이 있어도 재생이 그 시간만큼
+# 그대로 멈춰 있지 않도록, 연속 두 행 사이 대기 시간의 상한을 둔다.
+REPLAY_MAX_GAP_SEC: float = env.float("REPLAY_MAX_GAP_SEC", default=3.0)

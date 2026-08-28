@@ -224,6 +224,7 @@ const charts = new Map();   // id → chart object
 let dockArea    = null;
 let popupLayer  = null;
 let flightBC    = null;
+let replayBC    = null;
 
 // /chart/external/ 경로에서 열린 경우 BroadcastChannel에서 데이터를 수신
 const IS_EXTERNAL = location.pathname.includes('/external');
@@ -282,16 +283,26 @@ function fmtVal(v) {
 function showTooltip(activeChart, ts) {
   const rows = [];
   for (const c of charts.values()) {
-    const i = nearestIdx(c.data.times, ts);
-    if (i < 0) continue;
     const isActive = c.id === activeChart.id;
-    const val = c.data.values[i];
-    if (val != null) {
-      rows.push({ label: c.channelLabel, unit: c.channelUnit, val, color: c.style.stroke, bold: isActive });
+    const i = nearestIdx(c.data.times, ts);
+    if (i >= 0) {
+      const val = c.data.values[i];
+      if (val != null) {
+        rows.push({ label: c.channelLabel, unit: c.channelUnit, val, color: c.style.stroke, bold: isActive });
+      }
+      for (const es of c.extraSeries) {
+        if (i < es.values.length && es.values[i] != null) {
+          rows.push({ label: es.label, unit: es.unit, val: es.values[i], color: es.stroke, bold: isActive });
+        }
+      }
     }
-    for (const es of c.extraSeries) {
-      if (i < es.values.length && es.values[i] != null) {
-        rows.push({ label: es.label, unit: es.unit, val: es.values[i], color: es.stroke, bold: isActive });
+    // Replay 시리즈는 자체 타임스탬프 배열을 가지므로 별도로 nearestIdx를 구한다
+    for (const entry of c.replay.values()) {
+      const ri = nearestIdx(entry.times, ts);
+      if (ri < 0) continue;
+      const val = entry.values[ri];
+      if (val != null) {
+        rows.push({ label: entry.label, unit: c.channelUnit, val, color: lightenColor(c.style.stroke, 0.55), bold: isActive });
       }
     }
   }
@@ -324,8 +335,71 @@ function showTooltip(activeChart, ts) {
 // ═══════════════════════════════════════════════════════
 // 5.5 LIVE UDP DATA HANDLER
 // ═══════════════════════════════════════════════════════
-function chartData(chart) {
-  return [chart.data.times, chart.data.values, ...chart.extraSeries.map(es => es.values)];
+// Replay 시리즈 스트로크 색상 — 채널 기본 색을 밝게(연하게) 만들어 Online
+// 데이터와 시각적으로 구분한다.
+function lightenColor(hex, pct) {
+  const c = hex.replace('#', '');
+  const num = parseInt(c, 16);
+  let r = (num >> 16) & 255, g = (num >> 8) & 255, b = num & 255;
+  r = Math.round(r + (255 - r) * pct);
+  g = Math.round(g + (255 - g) * pct);
+  b = Math.round(b + (255 - b) * pct);
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+}
+
+// 메인 채널·추가 채널(extraSeries, 메인과 같은 타임스탬프 배열 공유)·Replay
+// 시리즈(세션별 독립된 타임스탬프 배열)를 하나의 공유 x축으로 병합한다 —
+// uPlot은 차트 하나에 시리즈 전체가 같은 x 배열 인덱스를 공유해야 하므로,
+// 각 시리즈의 타임스탬프를 5ms 단위로 버킷팅해 정렬 병합한다.
+const MERGE_BUCKET_SEC = 0.005;
+
+function buildMergedData(chart) {
+  const replayEntries = Array.from(chart.replay.values());
+  const nExtra    = chart.extraSeries.length;
+  const nReplay   = replayEntries.length;
+  const totalCols = 1 + nExtra + nReplay;
+
+  const map = new Map();
+  const getRow = (t) => {
+    const key = Math.round(t / MERGE_BUCKET_SEC);
+    let row = map.get(key);
+    if (!row) {
+      row = new Array(totalCols).fill(null);
+      row.t = t;
+      map.set(key, row);
+    }
+    return row;
+  };
+
+  const mt = chart.data.times, mv = chart.data.values;
+  for (let i = 0; i < mt.length; i++) getRow(mt[i])[0] = mv[i];
+
+  chart.extraSeries.forEach((es, ei) => {
+    for (let i = 0; i < mt.length; i++) {
+      if (es.values[i] != null) getRow(mt[i])[1 + ei] = es.values[i];
+    }
+  });
+
+  replayEntries.forEach((entry, ri) => {
+    for (let i = 0; i < entry.times.length; i++) {
+      getRow(entry.times[i])[1 + nExtra + ri] = entry.values[i];
+    }
+  });
+
+  const rows = Array.from(map.values()).sort((a, b) => a.t - b.t);
+  const times = rows.map(r => r.t);
+  const cols = [];
+  for (let c = 0; c < totalCols; c++) cols.push(rows.map(r => r[c]));
+  return [times, ...cols];
+}
+
+function renderThrottled() {
+  const now = performance.now();
+  if (now - liveLastRender < LIVE_RENDER_MS) return;
+  liveLastRender = now;
+  for (const chart of charts.values()) {
+    if (chart.uplot) chart.uplot.setData(buildMergedData(chart));
+  }
 }
 
 function onFlightData(event) {
@@ -363,18 +437,67 @@ function onFlightData(event) {
   if (!anyUpdated) return;
 
   // 시뮬레이터와 동일한 20Hz 속도로 렌더링 스로틀
-  const now = performance.now();
-  if (now - liveLastRender >= LIVE_RENDER_MS) {
-    liveLastRender = now;
-    for (const chart of charts.values()) {
-      if (chart.uplot) chart.uplot.setData(chartData(chart));
-    }
-  }
+  renderThrottled();
 
   // 수신 중 → Disconnect 표시 해제, 5초 침묵 시 Disconnect 표시
   setUdpConnected(true);
   clearTimeout(liveTimeout);
   liveTimeout = setTimeout(() => setUdpConnected(false), 5000);
+}
+
+// ═══════════════════════════════════════════════════════
+// 5.6 REPLAY DATA HANDLER
+// ═══════════════════════════════════════════════════════
+// Replay는 세션별로 독립된 타임스탬프를 갖는 별도 시리즈로 취급한다(메인
+// 채널/extraSeries처럼 같은 패킷에서 나온 값이 아니므로 index를 공유하지
+// 않음) — chart.replay: session_id → { label, times[], values[] }.
+function onReplayData(event) {
+  const pkt = event.detail;
+  if (pkt.session_id == null || charts.size === 0) return;
+  const params = pkt.params || {};
+  const cutoff = pkt.ts - WINDOW_SEC;
+
+  let anyUpdated = false;
+  const newSeriesCharts = new Set();
+
+  for (const chart of charts.values()) {
+    const dot   = chart.channelKey.indexOf('.');
+    const group = chart.channelKey.slice(0, dot);
+    const field = chart.channelKey.slice(dot + 1);
+    const val   = params[group]?.[field];
+    if (val == null) continue;
+
+    let entry = chart.replay.get(pkt.session_id);
+    if (!entry) {
+      entry = { label: pkt.label, times: [], values: [] };
+      chart.replay.set(pkt.session_id, entry);
+      newSeriesCharts.add(chart);
+    }
+
+    entry.times.push(pkt.ts);
+    entry.values.push(val);
+    while (entry.times.length > 0 && entry.times[0] < cutoff) {
+      entry.times.shift();
+      entry.values.shift();
+    }
+    anyUpdated = true;
+  }
+
+  // 새 replay 세션이 시작된 차트는 시리즈 구성이 바뀌므로 uPlot을 다시 만든다
+  // (범례/색상 반영을 위해 필요 — rebuildUplot이 최신 데이터로 재구성함)
+  if (newSeriesCharts.size) {
+    for (const chart of newSeriesCharts) rebuildUplot(chart);
+    return;
+  }
+
+  if (anyUpdated) renderThrottled();
+}
+
+function onReplayEnd(event) {
+  const sessionId = event.detail.session_id;
+  for (const chart of charts.values()) {
+    if (chart.replay.delete(sessionId)) rebuildUplot(chart);
+  }
 }
 
 function setUdpConnected(connected) {
@@ -395,6 +518,12 @@ function buildUplot(bodyEl, chart) {
   const allSeries = [
     { stroke: chart.style.stroke, dash: chart.style.dash, label: chart.channelLabel },
     ...chart.extraSeries.map(es => ({ stroke: es.stroke, dash: es.dash, label: es.label })),
+    ...Array.from(chart.replay.values()).map(entry => ({
+      stroke: lightenColor(chart.style.stroke, 0.55),
+      dash:   'dotted',
+      label:  entry.label,
+      width:  2,
+    })),
   ];
 
   const opts = {
@@ -446,9 +575,14 @@ function buildUplot(bodyEl, chart) {
       {},
       ...allSeries.map(s => ({
         stroke: s.stroke,
-        width:  3,
+        width:  s.width || 3,
         dash:   dashMap[s.dash] || undefined,
         label:  s.label,
+        // buildMergedData()가 메인/Replay 등 서로 다른 소스의 타임스탬프를
+        // 하나의 공유 x축으로 합치면서, 각 시리즈 입장에서는 "다른 소스만
+        // 샘플이 있는" 시점에 자기 값이 null로 채워진다 — spanGaps 없이는
+        // uPlot이 이걸 실제 데이터 공백으로 보고 선을 끊어서 점처럼 보인다.
+        spanGaps: true,
       })),
     ],
     hooks: {
@@ -462,7 +596,7 @@ function buildUplot(bodyEl, chart) {
     },
   };
 
-  const u = new uPlot(opts, chartData(chart), bodyEl);
+  const u = new uPlot(opts, buildMergedData(chart), bodyEl);
   u.over.addEventListener('mouseleave', hideTooltip);
 
   // canvas background via CSS
@@ -1092,6 +1226,7 @@ function initToolbar() {
       style:       { stroke: nextColor(), dash: 'solid' },
       data:        { times: [], values: [] },
       extraSeries: [],
+      replay:      new Map(),
       yMin: null,
       yMax: null,
       uplot: null, _ro: null,
@@ -1322,6 +1457,7 @@ function applyIni(iniText) {
       style:        { stroke: sec.stroke || nextColor(), dash: sec.dash || 'solid' },
       data:         { times: [], values: [] },
       extraSeries,
+      replay:       new Map(),
       yMin: (yMinRaw != null && !isNaN(yMinRaw)) ? yMinRaw : null,
       yMax: (yMaxRaw != null && !isNaN(yMaxRaw)) ? yMaxRaw : null,
       uplot: null, _ro: null,
@@ -1428,6 +1564,19 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('flightData', e => flightBC.postMessage(e.detail));
   }
 
+  // 외부창은 base.html을 확장하지 않아(ws_client.js/replay_ws_client.js 미로드)
+  // 자체 WebSocket 연결이 없다 — Replay도 flightData와 동일하게 메인창 →
+  // 외부창 BroadcastChannel 중계 패턴을 따른다.
+  replayBC = new BroadcastChannel('replay-data-bc');
+  if (IS_EXTERNAL) {
+    replayBC.onmessage = e => {
+      window.dispatchEvent(new CustomEvent(e.data.kind, { detail: e.data.detail }));
+    };
+  } else {
+    window.addEventListener('replayData', e => replayBC.postMessage({ kind: 'replayData', detail: e.detail }));
+    window.addEventListener('replayEnd',  e => replayBC.postMessage({ kind: 'replayEnd',  detail: e.detail }));
+  }
+
   initTooltip();
   initToolbar();
   initSaveLoad();
@@ -1435,4 +1584,6 @@ document.addEventListener('DOMContentLoaded', () => {
   buildDockGrid('2x2');
   restoreSessionLayout();
   window.addEventListener('flightData', onFlightData);
+  window.addEventListener('replayData', onReplayData);
+  window.addEventListener('replayEnd', onReplayEnd);
 });

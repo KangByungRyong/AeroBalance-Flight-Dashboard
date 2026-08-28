@@ -4,66 +4,56 @@
 {% block title %}Replay — Flight Monitor{% endblock %}
 
 {% block extra_css %}
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <style>
-    #replay-layout {
-      display: grid;
-      grid-template-rows: 1fr 220px 52px;
-      height: 100%;
-      overflow: hidden;
-    }
-    #replay-map { width: 100%; height: 100%; }
-    #replay-chart { padding: 8px 16px; }
-    #replay-controls {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 0 16px;
-      background: var(--bg-secondary);
-      border-top: 1px solid var(--border-color);
-    }
-    #replay-controls button {
-      background: transparent;
-      border: 1px solid var(--border-color);
-      color: var(--text-primary);
-      border-radius: 4px;
-      padding: 4px 10px;
-      cursor: pointer;
-    }
-    #replay-controls button:hover { background: var(--bg-tertiary); }
-    #replay-progress {
-      flex: 1;
-      accent-color: var(--accent-active);
-    }
-    .speed-btn { font-size: 0.8rem; }
-    .speed-btn.active { background: var(--accent-blue) !important; border-color: var(--accent-active) !important; }
-  </style>
+<link rel="stylesheet" href="{% static 'css/replay.css' %}">
 {% endblock %}
 
 {% block content %}
-  <div id="replay-layout">
-    <div id="replay-map"></div>
-    <div id="replay-chart">
-      <div id="uplot-replay"></div>
+{% csrf_token %}
+<div class="rp-page p-4" data-max-sessions="{{ max_sessions }}">
+
+  <div class="page-header mb-3 rp-header-row">
+    <div>
+      <h4 class="mb-0">Replay — 저장된 비행 재생</h4>
+      <span class="text-muted small">
+        최대 {{ max_sessions }}개 세션을 선택해 재생 — 각 세션은 자동 감지된 이륙 시점을
+        현재 시각에 맞춰 Air Traffic Tracking / Data Chart 페이지에 표시됩니다.
+      </span>
     </div>
-    <div id="replay-controls">
-      <button id="btn-play" title="재생">▶</button>
-      <button id="btn-pause" title="일시정지">⏸</button>
-      <button id="btn-stop" title="정지">⏹</button>
-      <input type="range" id="replay-progress" min="0" max="100" value="0">
-      <span id="replay-time" style="color: var(--text-muted); font-size: 0.85rem; min-width: 80px;">00:00</span>
-      <div class="d-flex gap-1">
-        <button class="speed-btn" data-speed="0.5">0.5x</button>
-        <button class="speed-btn active" data-speed="1">1x</button>
-        <button class="speed-btn" data-speed="2">2x</button>
-        <button class="speed-btn" data-speed="4">4x</button>
-      </div>
+    <div class="rp-toolbar">
+      <span id="rp-selected-count" class="rp-selected-count">0개 선택</span>
+      <button id="rp-play-btn" class="btn btn-sm btn-outline-success" type="button" disabled>▶ 재생 시작</button>
+      <button id="rp-stop-btn" class="btn btn-sm btn-outline-danger" type="button" disabled>⏹ 정지</button>
     </div>
   </div>
+
+  <div id="rp-action-result" class="rp-action-result mb-2"></div>
+
+  <!-- 재생 중인 세션 진행 상태 -->
+  <div id="rp-active-panel" class="rp-active-panel mb-3" style="display:none">
+    <div class="rp-active-title">재생 중</div>
+    <div id="rp-active-list"></div>
+  </div>
+
+  <div class="rp-table-wrapper">
+    <table class="rp-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Callsign</th>
+          <th>조종사</th>
+          <th>시작 시각</th>
+          <th>종료 시각</th>
+        </tr>
+      </thead>
+      <tbody id="rp-session-tbody">
+        <tr><td colspan="5" class="rp-empty">불러오는 중...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
 {% endblock %}
 
 {% block extra_js %}
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="{% static 'js/uplot.min.js' %}"></script>
-  <script src="{% static 'js/replay.js' %}"></script>
+<script src="{% static 'js/replay.js' %}"></script>
 {% endblock %}
